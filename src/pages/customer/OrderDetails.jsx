@@ -151,9 +151,18 @@ export default function OrderDetails() {
                                 <dd className="font-medium">{formatPrice(order.subTotal)}</dd>
                             </div>
                             <div className="flex justify-between">
-                                <dt className="text-neutral-500">Shipping</dt>
+                                <dt className="text-neutral-500">Shipping fee</dt>
                                 <dd className="font-medium">{formatPrice(order.shippingFee)}</dd>
                             </div>
+                            {order.shippingDiscount > 0 && (
+                                <div className="flex justify-between text-green-600">
+                                    <dt>
+                                        Shipping discount
+                                        {order.shippingDiscount >= order.shippingFee && " (free shipping)"}
+                                    </dt>
+                                    <dd className="font-medium">−{formatPrice(order.shippingDiscount)}</dd>
+                                </div>
+                            )}
                             <div className="flex justify-between border-t border-gray-200 pt-3 text-base">
                                 <dt className="font-semibold">Total</dt>
                                 <dd className="font-bold text-heading">{formatPrice(order.total)}</dd>

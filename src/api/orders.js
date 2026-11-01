@@ -21,3 +21,9 @@ export const cancelOrder = async (id) => {
     const { data } = await api.post(`/orders/${id}/cancel`);
     return data; // return the order cancelled
 };
+
+// shipping fee for an address and cart subtotal (the server is the single source of truth)
+export const getShippingQuote = async (params, signal) => {
+    const { data } = await api.get("/orders/shipping-quote", { params, signal });
+    return data;
+};

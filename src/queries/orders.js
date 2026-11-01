@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { placeOrder, getMyOrder, getMyOrders, cancelOrder } from "../api/orders";
+import { placeOrder, getMyOrder, getMyOrders, cancelOrder, getShippingQuote } from "../api/orders";
 import { cartKeys } from "./cart";
 import { productKeys } from "./products";
 
@@ -23,6 +23,14 @@ export const useMyOrders = (params) =>
         queryKey: orderKeys.list(params),
         queryFn: ({ signal }) => getMyOrders(params, signal),
         placeholderData: keepPreviousData
+    });
+
+export const useShippingQuote = (params, enabled = true) =>
+    useQuery({
+        queryKey: ["shipping-quote", params],
+        queryFn: ({ signal }) => getShippingQuote(params, signal),
+        enabled,
+        placeholderData: keepPreviousData,
     });
 
 export const usePlaceOrder = () => {

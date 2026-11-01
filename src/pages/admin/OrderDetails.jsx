@@ -71,20 +71,18 @@ function OrderProgress({ status }) {
                 return (
                     <div key={step} className="min-w-0">
                         <div
-                            className={`mb-2 h-1.5 rounded-full ${
-                                completed || current
+                            className={`mb-2 h-1.5 rounded-full ${completed || current
                                     ? "bg-accent-100"
                                     : "bg-gray-200"
-                            }`}
+                                }`}
                         />
                         <p
-                            className={`text-xs ${
-                                current
+                            className={`text-xs ${current
                                     ? "font-bold text-neutral-900"
                                     : completed
-                                      ? "text-neutral-700"
-                                      : "text-neutral-400"
-                            }`}
+                                        ? "text-neutral-700"
+                                        : "text-neutral-400"
+                                }`}
                         >
                             {step}
                         </p>
@@ -249,11 +247,10 @@ export default function AdminOrderDetails() {
                                     onClick={() =>
                                         handleOrderStatus(action.status)
                                     }
-                                    className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
-                                        action.danger
+                                    className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${action.danger
                                             ? "border border-red-200 text-red-600 hover:bg-red-50"
                                             : "bg-accent-100 text-white hover:opacity-90"
-                                    }`}
+                                        }`}
                                 >
                                     {isUpdating ? (
                                         "Updating..."
@@ -453,30 +450,28 @@ export default function AdminOrderDetails() {
                     <Section title="Order Summary">
                         <dl className="mt-4 space-y-3 text-sm">
                             <div className="flex justify-between gap-3">
-                                <dt className="text-neutral-500">
-                                    Subtotal
-                                </dt>
-                                <dd className="font-medium">
-                                    {formatPrice(order.subTotal)}
-                                </dd>
+                                <dt className="text-neutral-500">Subtotal</dt>
+                                <dd className="font-medium">{formatPrice(order.subTotal)}</dd>
                             </div>
 
                             <div className="flex justify-between gap-3">
-                                <dt className="text-neutral-500">
-                                    Shipping
-                                </dt>
-                                <dd className="font-medium">
-                                    {order.shippingFee === 0
-                                        ? "Free"
-                                        : formatPrice(order.shippingFee)}
-                                </dd>
+                                <dt className="text-neutral-500">Shipping fee</dt>
+                                <dd className="font-medium">{formatPrice(order.shippingFee)}</dd>
                             </div>
+
+                            {order.shippingDiscount > 0 && (
+                                <div className="flex justify-between gap-3 text-green-700">
+                                    <dt>
+                                        Shipping discount
+                                        {order.shippingDiscount >= order.shippingFee && " (free shipping)"}
+                                    </dt>
+                                    <dd className="font-medium">−{formatPrice(order.shippingDiscount)}</dd>
+                                </div>
+                            )}
 
                             <div className="flex justify-between gap-3 border-t border-gray-200 pt-3 text-base">
                                 <dt className="font-semibold">Total</dt>
-                                <dd className="font-bold text-neutral-900">
-                                    {formatPrice(order.total)}
-                                </dd>
+                                <dd className="font-bold text-neutral-900">{formatPrice(order.total)}</dd>
                             </div>
                         </dl>
                     </Section>

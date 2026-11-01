@@ -12,6 +12,7 @@ import {
     Percent,
     TrendingUp,
     UserRound,
+    Star
 } from "lucide-react";
 
 // side bar links
@@ -22,6 +23,7 @@ const sidebarSections = [
             { name: "Dashboard", path: "/admin", icon: LayoutDashboard, end: true },
             { name: "Orders", path: "/admin/orders", icon: ShoppingBag },
             { name: "Deals & Promotions", path: "/admin/deals", icon: Percent },
+            { name: "Reviews", path: "/admin/reviews", icon: Star },
         ],
     },
     {

@@ -23,6 +23,7 @@ import AdminProfile from "./pages/admin/Profile";
 import Checkout from "./pages/customer/Checkout";
 import OrderDetails from "./pages/customer/OrderDetails";
 import AdminOrderDetails from "./pages/admin/OrderDetails";
+import Reviews from "./pages/admin/Reviews";
 
 const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
 const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -62,6 +63,7 @@ function App() {
               <Route path="orders/:id" element={<AdminOrderDetails />} />
 
               <Route path="deals" element={<Deals />} />
+              <Route path="reviews" element={<Reviews />} />
               <Route path="products" element={<AdminProductPage />} />
               <Route path="products/new" element={<AdminProductFormPage />} />
               <Route path="products/:id/edit" element={<AdminProductFormPage />} />

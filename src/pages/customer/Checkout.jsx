@@ -8,11 +8,11 @@ import Skeleton from "../../components/ui/Skeleton";
 import AddressModal from "../../components/profile/AddressModal";
 import { useCart } from "../../queries/cart";
 import { useAddresses } from "../../queries/addresses";
-import { usePlaceOrder } from "../../queries/orders";
+import { usePlaceOrder, useShippingQuote } from "../../queries/orders";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { formatPrice } from "../../lib/format";
+import ShippingNudge from "../../components/orders/ShippingNudge";
 
-const SHIPPING_FEE = 50;
 const PAYMENT_METHODS = [
     { value: "COD", label: "Cash on delivery", hint: "Pay when your order arrives." }, // cod for now
 ];
@@ -50,10 +50,19 @@ export default function Checkout() {
     const addressId = pickedAddressId ?? (addresses.find((a) => a.isDefault) ?? addresses[0])?.id ?? null;
 
     const subTotal = items.reduce((sum, i) => sum + i.subTotal, 0);
-    const total = subTotal + SHIPPING_FEE;
     const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
-    const canPlace = !invalid && items.length > 0 && !stockProblem && addressId !== null && !placeOrder.isPending;
+    // the server works out the shipping fee from the chosen address and the subtotal
+    const selectedAddress = addresses.find((a) => a.id === addressId);
+    const { data: quote, isFetching: quoting } = useShippingQuote(
+        { province: selectedAddress?.province, city: selectedAddress?.city, subtotal: subTotal },
+        Boolean(selectedAddress) && subTotal > 0,
+    );
+    const total = subTotal + (quote?.payable ?? 0);
+
+    const canPlace =
+        !invalid && items.length > 0 && !stockProblem && addressId !== null &&
+        !placeOrder.isPending && Boolean(quote) && !quoting;
 
     function handlePlaceOrder() {
         placeOrder.mutate(
@@ -233,15 +242,26 @@ export default function Checkout() {
                                 <dt className="text-neutral-500">Items ({itemCount})</dt>
                                 <dd className="font-medium">{formatPrice(subTotal)}</dd>
                             </div>
-                            <div className="flex justify-between">
-                                <dt className="text-neutral-500">Shipping</dt>
-                                <dd className="font-medium">{formatPrice(SHIPPING_FEE)}</dd>
+                            <div className="flex justify-between gap-3">
+                                <dt className="text-neutral-500">Shipping fee{quote && ` (${quote.zoneLabel})`}</dt>
+                                <dd className="font-medium">{quote ? formatPrice(quote.fee) : "…"}</dd>
                             </div>
+                            {quote?.discount > 0 && (
+                                <div className="flex justify-between gap-3 text-green-600">
+                                    <dt>
+                                        Shipping discount
+                                        {quote.discount >= quote.fee && " (free shipping)"}
+                                    </dt>
+                                    <dd className="font-medium">−{formatPrice(quote.discount)}</dd>
+                                </div>
+                            )}
                             <div className="flex justify-between border-t border-gray-200 pt-3 text-base">
                                 <dt className="font-semibold">Total</dt>
-                                <dd className="font-bold text-heading">{formatPrice(total)}</dd>
+                                <dd className="font-bold text-heading">{quote ? formatPrice(total) : "…"}</dd>
                             </div>
                         </dl>
+
+                        <ShippingNudge quote={quote} subtotal={subTotal} />
 
                         <button
                             type="button"

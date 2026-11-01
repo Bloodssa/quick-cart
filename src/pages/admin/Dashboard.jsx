@@ -9,6 +9,7 @@ import OrderStatusChart from "../../components/dashboard/OrderStatusChart";
 import NeedsActionTable from "../../components/dashboard/NeedsActionTable";
 import TopProducts from "../../components/dashboard/TopProducts";
 import RestockList from "../../components/dashboard/RestockList";
+import ReviewsToAnswer from "../../components/dashboard/ReviewsToAnswer";
 
 export default function Dashboard() {
     useDocumentTitle("Dashboard");
@@ -40,7 +41,10 @@ export default function Dashboard() {
             </ChartTheme>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <NeedsActionTable orders={data?.needsAction} loading={isPending} />
+                <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
+                    <NeedsActionTable orders={data?.needsAction} loading={isPending} />
+                    <ReviewsToAnswer reviews={data?.reviews} loading={isPending} />
+                </div>
                 <div className="flex flex-col gap-4">
                     <TopProducts products={data?.topProducts} />
                     <RestockList items={data?.restock} />
