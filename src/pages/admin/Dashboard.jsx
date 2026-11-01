@@ -21,7 +21,7 @@ export default function Dashboard() {
             <PageHeader
                 title="Dashboard"
                 subtitle="What needs your attention today."
-                action={<Link to="/admin/orders?status=Pending" className={primaryBtn}>Review pending orders</Link>}
+                action={<Link to="/admin/orders?status=Pending" className={primaryBtn}>Review orders</Link>}
             />
 
             <DashboardStats data={data} loading={isPending} />

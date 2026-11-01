@@ -6,7 +6,9 @@ import { getErrorMessage } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
 import { formatPrice } from "../../lib/format";
 import { useAddToCart } from "../../queries/cart";
+import { useReviewSummary } from "../../queries/reviews";
 import QuantityStepper from "../cart/QuantityStepper";
+import StarRating from "../reviews/StarRating";
 import ProductDescription from "./ProductDescription";
 
 const MAX_PER_ITEM = 99;
@@ -24,6 +26,7 @@ export default function ProductInfo({
     const navigate = useNavigate();
     const location = useLocation();
     const addToCart = useAddToCart();
+    const { data: ratings } = useReviewSummary(id); // shares the cache with the reviews section
     const [quantity, setQuantity] = useState(1);
     const [pending, setPending] = useState(null); // cart or buy
 
@@ -87,6 +90,19 @@ export default function ProductInfo({
             )}
 
             <h1 className="mt-3 text-3xl leading-tight font-bold text-heading">{name}</h1>
+
+            {ratings && (
+                <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-accent-100">
+                    {ratings.total > 0 ? (
+                        <>
+                            <span className="font-semibold text-heading">{ratings.average.toFixed(1)}</span>
+                            <StarRating value={ratings.average} />
+                            <span>({ratings.total} {ratings.total === 1 ? "review" : "reviews"})</span>
+                        </>
+                    ) : "No reviews yet"}
+                </a>
+            )}
+
             <p className="mt-5 border-t border-gray-200 pt-5 text-3xl font-bold text-heading">
                 {formatPrice(price)}
             </p>

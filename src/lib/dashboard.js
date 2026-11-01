@@ -24,8 +24,14 @@ export function age(iso, now) {
 
 export function deltaText(today, yesterday) {
     const diff = today - yesterday;
+
     if (diff === 0) return "Same as yesterday";
-    return `${diff > 0 ? "+" : ""}${diff} vs yesterday`;
+
+    if (diff > 0) {
+        return `+${diff} compared to yesterday`;
+    }
+
+    return `${Math.abs(diff)} fewer than yesterday`;
 }
 
 export const ORDER_STATUS_TONE = {

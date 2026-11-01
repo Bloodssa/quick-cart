@@ -6,6 +6,7 @@ import Skeleton from "../../components/ui/Skeleton";
 import HomeLayout from "../../layouts/HomeLayout";
 import { useProduct } from "../../queries/products";
 import RelatedProducts from "../../components/products/RelatedProducts";
+import ReviewsSection from "../../components/reviews/ReviewsSection";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 
 export default function ProductPage() {
@@ -49,6 +50,8 @@ export default function ProductPage() {
                 <ProductGallery key={`gallery-${product.id}`} images={product.images} name={product.name} />
                 <ProductInfo key={`info-${product.id}`} {...product} />
             </div>
+
+            <ReviewsSection key={`reviews-${product.id}`} productId={product.id} />
 
             <RelatedProducts
                 title="You may also like"
