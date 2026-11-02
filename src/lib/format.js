@@ -13,3 +13,8 @@ export const formatDate = (value) => {
         minute: "2-digit",
     });
 };
+
+export function formatSold(n) {
+    if (n < 1000) return String(n);
+    return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+}

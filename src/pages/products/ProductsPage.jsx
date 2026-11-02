@@ -22,17 +22,34 @@ const ProductsPage = () => {
 
     const sort = searchParams.get("sort");
     const categoryId = searchParams.get("categoryId") ?? "";
-    const featured = searchParams.get("featured");
+    const deals = searchParams.get("deals");
+    const newArrivals = searchParams.get("newArrivals");
+    const bestSellers = searchParams.get("bestSellers");
     const search = searchParams.get("search");
     const page = Number(searchParams.get("page") ?? 1);
 
     const { data, isPending, isFetching, error } = useProducts({
-        sort, categoryId, featured, search, page, pageSize: PAGE_SIZE,
+        sort,
+        categoryId,
+        search,
+        page,
+        pageSize: PAGE_SIZE,
+        onDeal: deals ? true : undefined,
+        newArrivals: newArrivals ? true : undefined,
+        bestSellers: bestSellers ? true : undefined,
     });
 
     const products = data?.products ?? [];
-    const title = categoryId ? products[0]?.category ?? "Category" : featured ? "Deals" : sortTitle[sort?.toLocaleLowerCase()] ?? "All Products";
-    const totalPages = Math.ceil(products.totalResults / PAGE_SIZE);
+    const title = categoryId
+        ? products[0]?.categoryName ?? "Category"
+        : deals
+            ? "Deals"
+            : newArrivals
+                ? "New Arrivals"
+                : bestSellers
+                    ? "Best Sellers"
+                    : sortTitle[sort?.toLowerCase()] ?? "All Products";
+    const totalPages = Math.ceil((data?.totalResults ?? 0) / PAGE_SIZE);
 
     const handleCategoryChange = (value) => {
         const next = new URLSearchParams(searchParams);

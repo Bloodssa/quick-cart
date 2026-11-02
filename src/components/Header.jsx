@@ -10,9 +10,9 @@ import CartLink from "./cart/CartLink";
 const navLinks = [
     { name: "Home", path: "/" },
     { name: "Products", path: "/products" },
-    { name: "Deals", path: "/products?featured=true" },
-    { name: "New Arrivals", path: "/products?sort=newest" },
-    { name: "Best Sellers", path: "/products?sort=popular" },
+    { name: "Deals", path: "/products?deals=true" },
+    { name: "New Arrivals", path: "/products?newArrivals=true&sort=newest" },
+    { name: "Best Sellers", path: "/products?bestSellers=true&sort=popular" },
 ];
 
 const getActivePath = (pathname, search) => {
