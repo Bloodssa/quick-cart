@@ -34,7 +34,7 @@ export default function AuthProvider({ children }) {
 
                 setUser(me);
                 setStatus("authenticated");
-            } catch(error) {
+            } catch (error) {
                 if (cancelled) return;
                 console.error("Could not restore the session:", error);
 
@@ -50,6 +50,12 @@ export default function AuthProvider({ children }) {
         return () => {
             cancelled = true;
         };
+    }, []);
+
+    const updateUser = useCallback((updated) => {
+        setUser((current) =>
+            current ? { ...current, ...updated } : current
+        );
     }, []);
 
     // throw by api.js when a token can no longer refresh or expires
@@ -79,8 +85,8 @@ export default function AuthProvider({ children }) {
     }, [reset]);
 
     const value = useMemo(
-        () => ({ user, status, isAdmin: user?.role === "Admin", login, logout }),
-        [user, status, login, logout]
+        () => ({ user, status, isAdmin: user?.role === "Admin", login, logout, updateUser }),
+        [user, status, login, logout, updateUser]
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

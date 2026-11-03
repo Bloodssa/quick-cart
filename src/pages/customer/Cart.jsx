@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "../../api/client";
 import CartItemRow from "../../components/cart/CartItemRow";
@@ -13,6 +13,8 @@ import Checkbox from "../../components/ui/Checkbox";
 import { useCartSelection } from "../../hooks/useCartSelection";
 import GuestCartPrompt from "../../components/cart/GuestCartPrompt";
 import { useAuth } from "../../hooks/useAuth";
+import { formatPrice } from "../../lib/format";
+import AppModal, { modalBtn, useModal } from "../../components/ui/AppModal";
 
 const Cart = () => {
     useDocumentTitle("Cart");
@@ -30,6 +32,7 @@ const Cart = () => {
 
     const selection = useCartSelection(cart?.items ?? []);
     const navigate = useNavigate();
+    const confirm = useModal();
 
     // a check product with problem in stockQQuantity wll be rejected
     const hasStockProblem = selection.selected.some((item) => item.quantity > item.stockQuantity);
@@ -59,7 +62,12 @@ const Cart = () => {
             return;
         }
 
+        confirm.open(); // let the customer verify first
+    }
+
+    function proceedToCheckout() {
         const ids = selection.selected.map((item) => item.id).join(",");
+        confirm.close();
         navigate(`/checkout?items=${ids}`);
     }
 
@@ -144,6 +152,55 @@ const Cart = () => {
                     />
                 </div>
             )}
+
+            {/* confirm before going to checkout */}
+            <AppModal
+                isOpen={confirm.isOpen}
+                onClose={confirm.close}
+                icon={ShoppingBag}
+                variant="accent"
+                title="Review your selection"
+                description="Make sure these are the items you want to check out."
+                footer={
+                    <>
+                        <button type="button" onClick={confirm.close} className={modalBtn.secondary}>
+                            Back to cart
+                        </button>
+                        <button type="button" onClick={proceedToCheckout} className={modalBtn.primary}>
+                            Continue to checkout
+                        </button>
+                    </>
+                }
+            >
+                <ul className="divide-y divide-gray-200">
+                    {selection.selected.map((item) => (
+                        <li key={item.id} className="flex items-center gap-3 py-3">
+                            <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-gray-300">
+                                {item.imageUrl ? (
+                                    <img src={item.imageUrl} alt={item.productName} className="h-full w-full object-contain p-1" />
+                                ) : (
+                                    <span className="text-[10px] text-neutral-500">No image</span>
+                                )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="line-clamp-1 font-semibold text-heading">{item.productName}</p>
+                                <p className="text-xs text-neutral-500">
+                                    {formatPrice(item.unitPrice)} x {item.quantity}
+                                </p>
+                            </div>
+                            <p className="shrink-0 font-bold text-heading">{formatPrice(item.subTotal)}</p>
+                        </li>
+                    ))}
+                </ul>
+
+                <div className="mt-3 flex justify-between border-t border-gray-200 pt-3 text-sm">
+                    <span className="text-neutral-500">
+                        Subtotal ({selection.selectedQuantity} {selection.selectedQuantity === 1 ? "item" : "items"})
+                    </span>
+                    <span className="font-bold text-heading">{formatPrice(selection.selectedSubTotal)}</span>
+                </div>
+                <p className="mt-2 text-xs text-neutral-500">Deals, vouchers and shipping are worked out at checkout.</p>
+            </AppModal>
 
             <RelatedProducts
                 title="You may also like"

@@ -10,6 +10,7 @@ import { useCancelOrder, useMyOrder } from "../../queries/orders";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { formatDate, formatPrice } from "../../lib/format";
 import { MoveLeft } from "lucide-react";
+import { getDeal, getDealSavings } from "../../lib/orderDeals";
 
 export default function OrderDetails() {
     const { id } = useParams();
@@ -60,6 +61,7 @@ export default function OrderDetails() {
 
     const canCancel = order.status === "Pending" && order.payment?.paymentStatus !== "Paid";
     const address = order.address;
+    const dealSavings = getDealSavings(order.items);
 
     return (
         <HomeLayout>
@@ -93,32 +95,44 @@ export default function OrderDetails() {
                         Items ({order.items.length})
                     </h2>
                     <ul className="divide-y divide-gray-200">
-                        {order.items.map((item) => (
-                            <li key={item.productId} className="flex gap-4 py-4">
-                                <Link
-                                    to={`/products/${item.productId}`}
-                                    className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-gray-300"
-                                >
-                                    {item.imageUrl ? (
-                                        <img src={item.imageUrl} alt={item.productName} className="h-full w-full object-contain p-1" />
-                                    ) : (
-                                        <span className="text-xs text-neutral-500">No image</span>
-                                    )}
-                                </Link>
-                                <div className="min-w-0 flex-1">
+                        {order.items.map((item) => {
+                            const deal = getDeal(item);
+
+                            return (
+                                <li key={item.productId} className="flex gap-4 py-4">
                                     <Link
                                         to={`/products/${item.productId}`}
-                                        className="line-clamp-2 font-semibold text-heading hover:text-accent-100"
+                                        className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-gray-300"
                                     >
-                                        {item.productName}
+                                        {item.imageUrl ? (
+                                            <img src={item.imageUrl} alt={item.productName} className="h-full w-full object-contain p-1" />
+                                        ) : (
+                                            <span className="text-xs text-neutral-500">No image</span>
+                                        )}
                                     </Link>
-                                    <p className="mt-0.5 text-sm text-neutral-500">
-                                        {formatPrice(item.unitPrice)} x {item.quantity}
-                                    </p>
-                                </div>
-                                <p className="shrink-0 font-bold text-heading">{formatPrice(item.subTotal)}</p>
-                            </li>
-                        ))}
+                                    <div className="min-w-0 flex-1">
+                                        <Link
+                                            to={`/products/${item.productId}`}
+                                            className="line-clamp-2 font-semibold text-heading hover:text-accent-100"
+                                        >
+                                            {item.productName}
+                                        </Link>
+                                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-neutral-500">
+                                            <span>{formatPrice(item.unitPrice)} x {item.quantity}</span>
+                                            {deal && (
+                                                <>
+                                                    <s>{formatPrice(deal.regularPrice)}</s>
+                                                    <span className="rounded-md border border-accent-100 bg-accent-50 px-1.5 py-0.5 text-xs font-semibold text-heading">
+                                                        {deal.label}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <p className="shrink-0 font-bold text-heading">{formatPrice(item.subTotal)}</p>
+                                </li>
+                            );
+                        })}
                     </ul>
                 </section>
 
@@ -150,6 +164,12 @@ export default function OrderDetails() {
                                 <dt className="text-neutral-500">Subtotal</dt>
                                 <dd className="font-medium">{formatPrice(order.subTotal)}</dd>
                             </div>
+                            {order.discountAmount > 0 && (
+                                <div className="flex justify-between gap-3 text-green-600">
+                                    <dt>Voucher{order.voucherCode && ` (${order.voucherCode})`}</dt>
+                                    <dd className="font-medium">−{formatPrice(order.discountAmount)}</dd>
+                                </div>
+                            )}
                             <div className="flex justify-between">
                                 <dt className="text-neutral-500">Shipping fee</dt>
                                 <dd className="font-medium">{formatPrice(order.shippingFee)}</dd>
@@ -168,6 +188,11 @@ export default function OrderDetails() {
                                 <dd className="font-bold text-heading">{formatPrice(order.total)}</dd>
                             </div>
                         </dl>
+                        {dealSavings > 0 && (
+                            <p className="mt-3 text-xs font-medium text-green-600">
+                                You saved {formatPrice(dealSavings)} with deals.
+                            </p>
+                        )}
                     </section>
                 </div>
             </div>

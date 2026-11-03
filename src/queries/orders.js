@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { placeOrder, getMyOrder, getMyOrders, cancelOrder, getShippingQuote } from "../api/orders";
+import { placeOrder, getMyOrder, getMyOrders, cancelOrder, getShippingQuote, previewOrder  } from "../api/orders";
 import { cartKeys } from "./cart";
 import { productKeys } from "./products";
 
@@ -59,3 +59,12 @@ export const useCancelOrder = () => {
         }
     });
 };
+
+export const useOrderPreview = (values, enabled) =>
+    useQuery({
+        queryKey: ["orders", "preview", values.addressId, [...values.cartItemIds].sort(), values.voucherCode],
+        queryFn: ({ signal }) => previewOrder(values, signal),
+        enabled,
+        placeholderData: keepPreviousData,
+        staleTime: 15_000,
+    });

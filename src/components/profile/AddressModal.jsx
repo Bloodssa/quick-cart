@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, LocateFixed } from "lucide-react";
+import { LocateFixed, Pencil } from "lucide-react";
 import { getPosition, reverseGeocode } from "../../api/geocode";
 import { toast } from "sonner";
 import { getErrorMessage, extractFieldErrors } from "../../api/client";
@@ -9,6 +9,7 @@ import SelectField from "../form/SelectField";
 import { allCitiesQuery, barangaysQuery, provincesQuery, useAllCities, useBarangays, useProvinces } from "../../queries/psgc";
 import { useQueryClient } from "@tanstack/react-query";
 import { findMatch } from "../../lib/addressMatch";
+import { FormModal } from "../ui/AppModal";
 
 const initialValues = (address) => ({
     recipientName: address?.recipientName ?? "",
@@ -42,7 +43,7 @@ const findCode = (list, name) =>
 const findName = (list, code) => list?.find((o) => o.code === code)?.name ?? "";
 
 export default function AddressModal({ address, onClose }) {
-    const dialogRef = useRef(null);
+    const bodyRef = useRef(null);
     const isEdit = Boolean(address);
 
     const [values, setValues] = useState(() => initialValues(address));
@@ -204,10 +205,9 @@ export default function AddressModal({ address, onClose }) {
     const updateMutation = useUpdateAddress();
     const saving = createMutation.isPending || updateMutation.isPending;
 
+    // FormModal opens the dialog itself, so we only focus the first input
     useEffect(() => {
-        const dialog = dialogRef.current;
-        if (!dialog.open) dialog.showModal();
-        dialog.querySelector("input")?.focus();
+        bodyRef.current?.querySelector("input")?.focus();
     }, []);
 
     function handleChange(e) {
@@ -247,202 +247,171 @@ export default function AddressModal({ address, onClose }) {
     }
 
     return (
-        <dialog
-            ref={dialogRef}
+        <FormModal
+            isOpen
             onClose={onClose}
-            onClick={(e) => {
-                if (e.target === e.currentTarget) onClose();
-            }}
-            aria-labelledby="address-modal-title"
-            className="m-auto w-[calc(100%-1rem)] max-w-2xl rounded-md border border-gray-300 bg-white p-0 text-neutral-900 backdrop:bg-black/40 open:flex open:max-h-[92dvh] open:flex-col"
+            onSubmit={handleSubmit}
+            icon={isEdit ? Pencil : LocateFixed}
+            title={isEdit ? "Edit address" : "Add new address"}
+            submitLabel="Save address"
+            isPending={saving}
         >
-            <div className="flex shrink-0 items-center justify-between border-b border-gray-300 px-5 py-4">
-                <h2 id="address-modal-title" className="text-lg font-bold text-neutral-900">
-                    {isEdit ? "Edit address" : "Add new address"}
-                </h2>
-                <button
+            <div ref={bodyRef} className="space-y-4">
+                {formError && (
+                    <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+                        {formError}
+                    </p>
+                )}
+
+                {/* <button
                     type="button"
-                    onClick={onClose}
-                    aria-label="Close"
-                    className="rounded-md p-1 text-neutral-500 hover:bg-gray-100 hover:text-neutral-900"
+                    onClick={fillFromLocation}
+                    disabled={locating}
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-accent-300 bg-accent-50 px-4 text-sm font-semibold text-accent-300 transition-colors hover:bg-accent-50/70 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 >
-                    <X size={20} aria-hidden="true" />
-                </button>
-            </div>
+                    <LocateFixed size={16} aria-hidden="true" />
+                    {locating ? "Finding your location…" : "Use my current location"}
+                </button> */}
 
-            <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
-                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 md:px-12">
-                    {formError && (
-                        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-                            {formError}
-                        </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                        label="Recipient name"
+                        id="recipientName"
+                        value={values.recipientName}
+                        onChange={handleChange}
+                        error={errors.recipientName}
+                        autoComplete="name"
+                        aria-invalid={Boolean(errors.recipientName)}
+                        placeholder="Juan Dela Cruz"
+                    />
+                    <FormField
+                        label="Contact number"
+                        id="contactNumber"
+                        value={values.contactNumber}
+                        onChange={handleChange}
+                        error={errors.contactNumber}
+                        inputMode="tel"
+                        placeholder="09123456789"
+                        autoComplete="tel"
+                        aria-invalid={Boolean(errors.contactNumber)}
+                    />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Province */}
+                    {typeProvince ? (
+                        <FormField
+                            label="Province"
+                            id="province"
+                            value={values.province}
+                            onChange={handleChange}
+                            error={errors.province}
+                            autoComplete="address-level1"
+                            aria-invalid={Boolean(errors.province)}
+                            placeholder="Cebu"
+                        />
+                    ) : (
+                        <SelectField
+                            label="Province"
+                            id="province"
+                            value={provinceCode}
+                            onChange={pickProvince}
+                            options={provinces.data}
+                            loading={provinces.isPending}
+                            placeholder="Select province"
+                            error={errors.province}
+                        />
                     )}
-                    <button
-                        type="button"
-                        onClick={fillFromLocation}
-                        disabled={locating}
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-accent-300 bg-accent-50 px-4 text-sm font-semibold text-accent-300 transition-colors hover:bg-accent-50/70 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                    >
-                        <LocateFixed size={16} aria-hidden="true" />
-                        {locating ? "Finding your location…" : "Use my current location"}
-                    </button>
-                    <div className="grid gap-4 sm:grid-cols-2">
+
+                    {/* City */}
+                    {typeCity ? (
                         <FormField
-                            label="Recipient name"
-                            id="recipientName"
-                            value={values.recipientName}
+                            label="City / Municipality"
+                            id="city"
+                            value={values.city}
                             onChange={handleChange}
-                            error={errors.recipientName}
-                            autoComplete="name"
-                            aria-invalid={Boolean(errors.recipientName)}
-                            placeholder="Juan Dela Cruz"
+                            error={errors.city}
+                            autoComplete="address-level2"
+                            aria-invalid={Boolean(errors.city)}
+                            placeholder="Cebu City"
                         />
+                    ) : (
+                        <SelectField
+                            label="City / Municipality"
+                            id="city"
+                            value={cityCode}
+                            onChange={pickCity}
+                            options={cityOptions}
+                            loading={allCities.isPending}
+                            placeholder="Select city / municipality"
+                            error={errors.city}
+                        />
+                    )}
+
+                    {/* Barangay */}
+                    {typeBarangay ? (
                         <FormField
-                            label="Contact number"
-                            id="contactNumber"
-                            value={values.contactNumber}
+                            label="Barangay"
+                            id="barangay"
+                            value={values.barangay}
                             onChange={handleChange}
-                            error={errors.contactNumber}
-                            inputMode="tel"
-                            placeholder="09123456789"
-                            autoComplete="tel"
-                            aria-invalid={Boolean(errors.contactNumber)}
+                            error={errors.barangay}
+                            aria-invalid={Boolean(errors.barangay)}
+                            placeholder="Barangay 1234"
                         />
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        {/* Province */}
-                        {typeProvince ? (
-                            <FormField
-                                label="Province"
-                                id="province"
-                                value={values.province}
-                                onChange={handleChange}
-                                error={errors.province}
-                                autoComplete="address-level1"
-                                aria-invalid={Boolean(errors.province)}
-                                placeholder="Cebu"
-                            />
-                        ) : (
-                            <SelectField
-                                label="Province"
-                                id="province"
-                                value={provinceCode}
-                                onChange={pickProvince}
-                                options={provinces.data}
-                                loading={provinces.isPending}
-                                placeholder="Select province"
-                                error={errors.province}
-                            />
-                        )}
-
-                        {/* City */}
-                        {typeCity ? (
-                            <FormField
-                                label="City / Municipality"
-                                id="city"
-                                value={values.city}
-                                onChange={handleChange}
-                                error={errors.city}
-                                autoComplete="address-level2"
-                                aria-invalid={Boolean(errors.city)}
-                                placeholder="Cebu City"
-                            />
-                        ) : (
-                            <SelectField
-                                label="City / Municipality"
-                                id="city"
-                                value={cityCode}
-                                onChange={pickCity}
-                                options={cityOptions}
-                                loading={allCities.isPending}
-                                placeholder="Select city / municipality"
-                                error={errors.city}
-                            />
-                        )}
-
-                        {/* Barangay */}
-                        {typeBarangay ? (
-                            <FormField
-                                label="Barangay"
-                                id="barangay"
-                                value={values.barangay}
-                                onChange={handleChange}
-                                error={errors.barangay}
-                                aria-invalid={Boolean(errors.barangay)}
-                                placeholder="Barangay 1234"
-                            />
-                        ) : (
-                            <SelectField
-                                label="Barangay"
-                                id="barangay"
-                                value={barangayCode}
-                                onChange={pickBarangay}
-                                options={barangays.data}
-                                loading={barangays.isFetching}
-                                disabled={!cityCode}
-                                placeholder={
-                                    !cityCode ? "Select city first"
-                                        : barangays.isFetching ? "Loading barangays…"
-                                            : "Select barangay"
-                                }
-                                error={errors.barangay}
-                            />
-                        )}
-
-                        <FormField
-                            label="Postal code"
-                            id="postalCode"
-                            value={values.postalCode}
-                            onChange={handleChange}
-                            error={errors.postalCode}
-                            inputMode="numeric"
-                            maxLength={4}
-                            autoComplete="postal-code"
-                            aria-invalid={Boolean(errors.postalCode)}
-                            placeholder="6000"
+                    ) : (
+                        <SelectField
+                            label="Barangay"
+                            id="barangay"
+                            value={barangayCode}
+                            onChange={pickBarangay}
+                            options={barangays.data}
+                            loading={barangays.isFetching}
+                            disabled={!cityCode}
+                            placeholder={
+                                !cityCode ? "Select city first"
+                                    : barangays.isFetching ? "Loading barangays…"
+                                        : "Select barangay"
+                            }
+                            error={errors.barangay}
                         />
-                    </div>
+                    )}
 
                     <FormField
-                        label="Street address"
-                        id="addressLine"
-                        value={values.addressLine}
+                        label="Postal code"
+                        id="postalCode"
+                        value={values.postalCode}
                         onChange={handleChange}
-                        error={errors.addressLine}
-                        placeholder="House no., street, building"
-                        autoComplete="address-line1"
-                        aria-invalid={Boolean(errors.addressLine)}
+                        error={errors.postalCode}
+                        inputMode="numeric"
+                        maxLength={4}
+                        autoComplete="postal-code"
+                        aria-invalid={Boolean(errors.postalCode)}
+                        placeholder="6000"
                     />
-
-                    <label className="flex items-center gap-2 text-sm text-neutral-900">
-                        <input
-                            type="checkbox"
-                            checked={values.isDefault}
-                            onChange={(e) => setValues((current) => ({ ...current, isDefault: e.target.checked }))}
-                            className="size-4 accent-accent-100"
-                        />
-                        Set as default address
-                    </label>
                 </div>
 
-                <div className="flex shrink-0 justify-end gap-3 border-t border-gray-300 px-5 py-4">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="h-11 rounded-md border border-gray-300 bg-white px-5 text-sm font-semibold text-neutral-900 hover:bg-gray-50"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="h-11 rounded-md bg-accent-100 px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {saving ? "Saving…" : "Save address"}
-                    </button>
-                </div>
-            </form>
-        </dialog>
+                <FormField
+                    label="Street address"
+                    id="addressLine"
+                    value={values.addressLine}
+                    onChange={handleChange}
+                    error={errors.addressLine}
+                    placeholder="House no., street, building"
+                    autoComplete="address-line1"
+                    aria-invalid={Boolean(errors.addressLine)}
+                />
+
+                <label className="flex items-center gap-2 text-sm text-heading">
+                    <input
+                        type="checkbox"
+                        checked={values.isDefault}
+                        onChange={(e) => setValues((current) => ({ ...current, isDefault: e.target.checked }))}
+                        className="size-4 accent-accent-100"
+                    />
+                    Set as default address
+                </label>
+            </div>
+        </FormModal>
     );
 }

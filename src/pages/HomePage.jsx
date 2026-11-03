@@ -20,7 +20,7 @@ const HomePage = () => {
             <ProductShelf
                 title="Featured Products"
                 params={{ featured: true, page: 1, pageSize: 10 }}
-                viewAllLink="/products?featured=true"
+                viewAllLink="/products?deals=true"
                 columns={6}
             />
 
@@ -30,7 +30,7 @@ const HomePage = () => {
             <ProductShelf
                 title="Trending Now"
                 params={{ sort: "popular", page: 1, pageSize: 10 }}
-                viewAllLink="/products?sort=popular"
+                viewAllLink="/products?bestSellers=true&sort=popular"
                 columns={5}
             />
 
@@ -41,7 +41,7 @@ const HomePage = () => {
             <ProductShelf
                 title="New Arrivals"
                 params={{ sort: "newest", page: 1, pageSize: 8 }}
-                viewAllLink="/products?sort=newest"
+                viewAllLink="/products?newArrivals=true&sort=newest"
                 columns={5}
             />
         </HomeLayout>

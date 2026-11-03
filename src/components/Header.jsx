@@ -10,9 +10,9 @@ import CartLink from "./cart/CartLink";
 const navLinks = [
     { name: "Home", path: "/" },
     { name: "Products", path: "/products" },
-    { name: "Deals", path: "/products?featured=true" },
-    { name: "New Arrivals", path: "/products?sort=newest" },
-    { name: "Best Sellers", path: "/products?sort=popular" },
+    { name: "Deals", path: "/products?deals=true" },
+    { name: "New Arrivals", path: "/products?newArrivals=true&sort=newest" },
+    { name: "Best Sellers", path: "/products?bestSellers=true&sort=popular" },
 ];
 
 const getActivePath = (pathname, search) => {
@@ -149,7 +149,7 @@ const Header = ({ subhead }) => {
                                 Back to Dashboard
                             </Link>
                         )}
-                        <CartLink />
+                        {user?.role?.toLowerCase() !== "admin" && <CartLink />}
 
                         {isLoggedIn && (
                             <div className="relative" ref={profileRef}>
@@ -171,8 +171,21 @@ const Header = ({ subhead }) => {
                                         </div>
 
                                         <div className="p-2">
+                                            {user?.role?.toLowerCase() === "admin" && (
+                                                <Link
+                                                    to="/admin"
+                                                    onClick={() => setProfileOpen(false)}
+                                                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm hover:bg-gray-100"
+                                                >
+                                                    <ArrowLeft className="h-5 w-5" />
+                                                    Back to Dashboard
+                                                </Link>
+                                            )}
+
                                             <Link
-                                                to="/profile"
+                                                to={user?.role?.toLowerCase() === "admin"
+                                                    ? "/admin/profile"
+                                                    : "/profile"}
                                                 onClick={() => setProfileOpen(false)}
                                                 className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm hover:bg-gray-100"
                                             >
@@ -197,7 +210,9 @@ const Header = ({ subhead }) => {
 
                     {/* Mobile menu */}
                     <div className="flex items-center gap-2 md:hidden">
-                        <CartLink variant="mobile" />
+                        {user?.role?.toLowerCase() !== "admin" && (
+                            <CartLink variant="mobile" />
+                        )}
                         <button
                             onClick={() => setMenuOpen(!isMenuOpen)}
                             className="p-2 text-black rounded-md hover:bg-gray-100 focus:outline-none"
@@ -241,20 +256,53 @@ const Header = ({ subhead }) => {
 
 
                         {!isLoading && (
-                            <Link to={isLoggedIn ? "/profile" : "/login"} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-md border border-gray-300 font-semibold text-sm hover:bg-accent-100 hover:text-white transition-colors">
-                                <UserRound className="w-5 h-5" />
-                                <span>{isLoggedIn ? "Profile" : "Log In"}</span>
-                            </Link>
-                        )}
-                        {isLoggedIn && (
-                            <button
-                                type="button"
-                                onClick={handleLogout}
-                                className="flex w-full items-center justify-center gap-2 rounded-md border border-red-200 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
-                            >
-                                <LogOut className="h-5 w-5" />
-                                Log Out
-                            </button>
+                            <div className="space-y-2 border-t border-gray-300 pt-3">
+                                {isLoggedIn ? (
+                                    <>
+                                        {user?.role?.toLowerCase() === "admin" && (
+                                            <Link
+                                                to="/admin"
+                                                onClick={() => setMenuOpen(false)}
+                                                className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 py-2.5 text-sm font-semibold hover:bg-gray-100"
+                                            >
+                                                <ArrowLeft className="h-5 w-5" />
+                                                Back to Dashboard
+                                            </Link>
+                                        )}
+
+                                        <Link
+                                            to={user?.role?.toLowerCase() === "admin"
+                                                ? "/admin/profile"
+                                                : "/profile"}
+                                            onClick={() => setMenuOpen(false)}
+                                            className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 py-2.5 text-sm font-semibold hover:bg-gray-100"
+                                        >
+                                            <CircleUserRound className="h-5 w-5" />
+                                            My Profile
+                                        </Link>
+
+                                        {isLoggedIn && (
+                                            <button
+                                                type="button"
+                                                onClick={handleLogout}
+                                                className="flex w-full items-center justify-center gap-2 rounded-md border border-red-200 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+                                            >
+                                                <LogOut className="h-5 w-5" />
+                                                Log Out
+                                            </button>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Link
+                                        to="/login"
+                                        onClick={() => setMenuOpen(false)}
+                                        className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 py-2.5 text-sm font-semibold hover:bg-gray-100"
+                                    >
+                                        <UserRound className="h-5 w-5" />
+                                        Log In
+                                    </Link>
+                                )}
+                            </div>
                         )}
                     </div>
                 )}

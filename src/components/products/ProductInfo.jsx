@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
-import { formatPrice } from "../../lib/format";
+import { formatPrice, formatSold } from "../../lib/format";
+import { DealEnds } from "../deals/PriceTag";
 import { useAddToCart } from "../../queries/cart";
 import { useReviewSummary } from "../../queries/reviews";
 import QuantityStepper from "../cart/QuantityStepper";
@@ -15,12 +17,8 @@ const MAX_PER_ITEM = 99;
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-100";
 
 export default function ProductInfo({
-    id,
-    name,
-    categoryName,
-    price,
-    stockQuantity,
-    description
+    id, name, categoryName, price, stockQuantity, description,
+    dealPrice, discountPercent, dealEndsAt, soldCount,
 }) {
     const { status } = useAuth(); // check for user is authenticated
     const navigate = useNavigate();
@@ -34,6 +32,13 @@ export default function ProductInfo({
     const lowStock = inStock && stockQuantity <= 10;
     const maxQuantity = Math.min(stockQuantity, MAX_PER_ITEM);
     const safeQuantity = Math.min(Math.max(quantity, 1), Math.max(maxQuantity, 1));
+    const queryClient = useQueryClient();
+    const deal = dealPrice != null;
+
+    const handleExpire = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: ["products"] }),
+        [queryClient],
+    );
 
     function requireLogin() {
         if (status === "loading") return false;
@@ -49,10 +54,10 @@ export default function ProductInfo({
 
     function handleAddToCart() {
         if (!requireLogin()) {
-             navigate("/login");
+            navigate("/login");
             return;
         }
-        
+
         setPending("cart");
         addToCart.mutate(
             { productId: id, quantity: safeQuantity },
@@ -92,20 +97,39 @@ export default function ProductInfo({
             <h1 className="mt-3 text-3xl leading-tight font-bold text-heading">{name}</h1>
 
             {ratings && (
-                <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-accent-100">
-                    {ratings.total > 0 ? (
-                        <>
-                            <span className="font-semibold text-heading">{ratings.average.toFixed(1)}</span>
-                            <StarRating value={ratings.average} />
-                            <span>({ratings.total} {ratings.total === 1 ? "review" : "reviews"})</span>
-                        </>
-                    ) : "No reviews yet"}
-                </a>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 text-sm text-gray-600">
+                    <a href="#reviews" className="inline-flex items-center gap-2 hover:text-accent-100">
+                        {ratings.total > 0 ? (
+                            <>
+                                <span className="font-semibold text-heading">{ratings.average.toFixed(1)}</span>
+                                <StarRating value={ratings.average} />
+                                <span>({ratings.total} {ratings.total === 1 ? "review" : "reviews"})</span>
+                            </>
+                        ) : "No reviews yet"}
+                    </a>
+                    {soldCount > 0 && <span className="border-l border-gray-300 pl-3">{formatSold(soldCount)} sold</span>}
+                </div>
             )}
 
-            <p className="mt-5 border-t border-gray-200 pt-5 text-3xl font-bold text-heading">
-                {formatPrice(price)}
-            </p>
+            <div className="mt-5 space-y-3 border-t border-gray-200 pt-5">
+                {deal && <DealEnds product={{ dealEndsAt }} variant="banner" onExpire={handleExpire} />}
+
+                {deal ? (
+                    <div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="text-3xl font-bold text-accent-100">{formatPrice(dealPrice)}</span>
+                            <s className="text-lg text-neutral-500">{formatPrice(price)}</s>
+                            <span className="rounded-md bg-accent-100 px-2 py-0.5 text-sm font-bold text-white">
+                                -{discountPercent}%
+                            </span>
+                        </div>
+                        <p className="mt-1 text-sm text-green-600">You save {formatPrice(price - dealPrice)}</p>
+                    </div>
+                ) : (
+                    <p className="text-3xl font-bold text-heading">{formatPrice(price)}</p>
+                )}
+            </div>
+            
             <p role="status" className={`mt-2 text-sm ${inStock && !lowStock ? "text-green-600" : "font-semibold text-red-500"}`}>
                 {!inStock ? "Out of stock" : lowStock ? `Only ${stockQuantity} left. Don't miss it` : `In stock (${stockQuantity} available)`}
             </p>

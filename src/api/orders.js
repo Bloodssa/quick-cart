@@ -1,7 +1,7 @@
 import { api } from "./client";
 
-export const placeOrder = async ({ addressId, paymentMethod, cartItemIds }) => {
-    const { data } = await api.post("/orders", { addressId, paymentMethod, cartItemIds });
+export const placeOrder = async ({ addressId, paymentMethod, cartItemIds, voucherCode }) => {
+    const { data } = await api.post("/orders", { addressId, paymentMethod, cartItemIds, voucherCode });
     return data;
 };
 
@@ -27,3 +27,8 @@ export const getShippingQuote = async (params, signal) => {
     const { data } = await api.get("/orders/shipping-quote", { params, signal });
     return data;
 };
+
+export const previewOrder = async (values, signal) => {
+    const { data } = await api.post('/orders/preview', values, { signal });
+    return data;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, ChevronDown, CircleUserRound, LogOut } from "lucide-react";
+import { Menu, ChevronDown, CircleUserRound, LogOut, Store } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
 const AdminHeader = ({
@@ -76,6 +76,14 @@ const AdminHeader = ({
                         </div>
 
                         <ul className="mt-1 flex flex-col border-t border-gray-200 pt-2">
+                            <Link
+                                to="/"
+                                onClick={() => setDropdownOpen(false)}
+                                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-black hover:bg-gray-100"
+                            >
+                                <Store className="h-5 w-5" />
+                                Back to store
+                            </Link>
                             <li>
                                 <Link
                                     to="/admin/profile"
