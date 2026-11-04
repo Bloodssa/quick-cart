@@ -100,9 +100,9 @@ export default function Reviews() {
             {isError ? (
                 <ErrorState onRetry={refetch} />
             ) : isPending ? (
-                <div className="h-48 animate-pulse rounded-md bg-gray-100" />
+                <EmptyState title="No reviews yet." />
             ) : reviews.length === 0 ? (
-                <EmptyState title={search ? "No reviews match your search" : EMPTY[filter]} />
+                <EmptyState bordered="true" title={search ? "No reviews match your search" : EMPTY[filter]} />
             ) : (
                 <ul className={`flex flex-col gap-4 transition-opacity ${isFetching ? "opacity-60" : ""}`}>
                     {reviews.map((r) => <ReviewCard key={r.id} review={r} />)}

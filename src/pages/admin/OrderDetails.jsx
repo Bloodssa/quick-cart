@@ -1,8 +1,9 @@
-
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Package, Truck } from "lucide-react";
+import { ArrowLeft, Ban, BadgeCheck, CheckCircle2, Package, Truck } from "lucide-react";
+import { toast } from "sonner";
 import { getErrorMessage } from "../../api/client";
 import Skeleton from "../../components/ui/Skeleton";
+import { ConfirmModal, useModal } from "../../components/ui/AppModal";
 import StatusBadge from "../../components/orders/StatusBadge";
 import {
     useAdminOrder,
@@ -103,6 +104,10 @@ export default function AdminOrderDetails() {
     } = useAdminOrder(id);
 
     const updateMutation = useUpdateAdminOrderStatus();
+    const cancelModal = useModal();
+    const paidModal = useModal();
+    const confirmModal = useModal();
+    const completeModal = useModal();
 
     useDocumentTitle(
         order ? `Order ${order.orderNumber}` : "Order"
@@ -150,43 +155,74 @@ export default function AdminOrderDetails() {
     const actions = NEXT_ACTIONS[order.status] ?? [];
     const isUpdating = updateMutation.isPending;
 
+    // Runs the update, then closes the modal (if any) so the toast isn't hidden behind it.
+    const submitUpdate = (variables, successMessage, closeModal) => {
+        updateMutation.mutate(variables, {
+            onSuccess: () => {
+                closeModal?.();
+                toast.success(successMessage);
+            },
+            onError: (err) => {
+                closeModal?.();
+                toast.error(getErrorMessage(err));
+            },
+        });
+    };
+
     const handleOrderStatus = (nextStatus) => {
         if (isUpdating) return;
 
-        if (
-            nextStatus === "Cancelled" &&
-            !window.confirm(
-                "Are you sure you want to cancel this order?"
-            )
-        ) {
+        // cancelling is destructive, so ask first
+        if (nextStatus === "Cancelled") {
+            cancelModal.open();
             return;
         }
 
-        updateMutation.mutate({
-            id: order.id,
-            status: nextStatus,
-            paymentStatus,
-        });
-    };
-
-    const handlePaymentStatus = (nextPaymentStatus) => {
-        if (isUpdating || !payment) return;
-
-        if (
-            nextPaymentStatus === "Paid" &&
-            !window.confirm(
-                "Confirm that the payment has actually been received or verified."
-            )
-        ) {
+        // confirming tells the customer their order is accepted, so ask first
+        if (nextStatus === "Confirmed") {
+            confirmModal.open();
             return;
         }
 
-        updateMutation.mutate({
-            id: order.id,
-            status: order.status,
-            paymentStatus: nextPaymentStatus,
-        });
+        // completing is final, so ask first
+        if (nextStatus === "Completed") {
+            completeModal.open();
+            return;
+        }
+
+        submitUpdate(
+            { id: order.id, status: nextStatus, paymentStatus },
+            `Order marked as ${nextStatus.toLowerCase()}`
+        );
     };
+
+    const confirmCancel = () =>
+        submitUpdate(
+            { id: order.id, status: "Cancelled", paymentStatus },
+            "Order cancelled",
+            cancelModal.close
+        );
+
+    const confirmOrder = () =>
+        submitUpdate(
+            { id: order.id, status: "Confirmed", paymentStatus },
+            "Order confirmed",
+            confirmModal.close
+        );
+
+    const confirmComplete = () =>
+        submitUpdate(
+            { id: order.id, status: "Completed", paymentStatus },
+            "Order marked as completed",
+            completeModal.close
+        );
+
+    const confirmPaid = () =>
+        submitUpdate(
+            { id: order.id, status: order.status, paymentStatus: "Paid" },
+            "Payment recorded as paid",
+            paidModal.close
+        );
 
     return (
         <div className="space-y-6">
@@ -426,9 +462,7 @@ export default function AdminOrderDetails() {
                                         <button
                                             type="button"
                                             disabled={isUpdating}
-                                            onClick={() =>
-                                                handlePaymentStatus("Paid")
-                                            }
+                                            onClick={paidModal.open}
                                             className="mt-3 min-h-10 w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold text-neutral-800 hover:bg-gray-50 disabled:opacity-50"
                                         >
                                             {isUpdating
@@ -477,6 +511,85 @@ export default function AdminOrderDetails() {
                     </Section>
                 </div>
             </div>
+
+            {/* Confirm order */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={confirmModal.close}
+                onConfirm={confirmOrder}
+                icon={CheckCircle2}
+                title="Confirm this order?"
+                message={
+                    <>
+                        Order <span className="font-semibold text-heading">{order.orderNumber}</span> will be
+                        marked as confirmed and moved on to processing.
+                    </>
+                }
+                confirmLabel="Confirm order"
+                pendingLabel="Confirming…"
+                cancelLabel="Not yet"
+                isPending={isUpdating}
+            />
+
+            {/* Mark order as completed */}
+            <ConfirmModal
+                isOpen={completeModal.isOpen}
+                onClose={completeModal.close}
+                onConfirm={confirmComplete}
+                icon={Truck}
+                title="Mark this order as completed?"
+                message={
+                    <>
+                        Order <span className="font-semibold text-heading">{order.orderNumber}</span> will be
+                        marked as completed. Once completed, its status can't be changed again.
+                    </>
+                }
+                confirmLabel="Mark completed"
+                pendingLabel="Completing…"
+                cancelLabel="Not yet"
+                isPending={isUpdating}
+            />
+
+            {/* Cancel order */}
+            <ConfirmModal
+                isOpen={cancelModal.isOpen}
+                onClose={cancelModal.close}
+                onConfirm={confirmCancel}
+                destructive
+                icon={Ban}
+                title="Cancel this order?"
+                message={
+                    <>
+                        Order <span className="font-semibold text-heading">{order.orderNumber}</span> will be
+                        cancelled and can't move forward again. This can't be undone.
+                    </>
+                }
+                confirmLabel="Cancel order"
+                pendingLabel="Cancelling…"
+                cancelLabel="Keep order"
+                isPending={isUpdating}
+            />
+
+            {/* Mark payment as paid */}
+            {payment && (
+                <ConfirmModal
+                    isOpen={paidModal.isOpen}
+                    onClose={paidModal.close}
+                    onConfirm={confirmPaid}
+                    icon={BadgeCheck}
+                    title="Record payment as paid?"
+                    message={
+                        <>
+                            Confirm that the payment of{" "}
+                            <span className="font-semibold text-heading">{formatPrice(payment.amount)}</span> has
+                            actually been received or verified.
+                        </>
+                    }
+                    confirmLabel="Mark as paid"
+                    pendingLabel="Saving…"
+                    isPending={isUpdating}
+                />
+            )}
         </div>
     );
 }

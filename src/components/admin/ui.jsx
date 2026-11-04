@@ -36,10 +36,10 @@ export function StatCard({ label, value, hint, loading }) {
 }
 
 const TONES = {
-    yellow: "bg-yellow-100 text-yellow-800 border border-yellow-800",
-    blue: "bg-blue-100 text-blue-800 border border-blue-800",
-    green: "bg-green-100 text-green-800 border border-green-800",
-    red: "bg-red-100 text-red-800 border border-red-800",
+    yellow: "bg-amber-50 text-amber-700 border border-amber-700",
+    blue: "bg-blue-50 text-blue-700 border border-blue-700",
+    green: "bg-green-50 text-green-700 border border-green-700",
+    red: "bg-red-50 text-red-600 border border-red-700",
     orange: "bg-accent-50 text-accent-300 border border-accent-100",
     gray: "bg-gray-100 text-gray-700 border border-gray-800",
 };
@@ -48,12 +48,38 @@ export function Pill({ tone = "gray", children }) {
     return <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-bold ${TONES[tone]}`}>{children}</span>;
 }
 
-export function EmptyState({ title, message }) {
+const TONE = {
+    default: "bg-gray-100 text-neutral-500",
+    accent: "bg-accent-50 text-accent-100",
+    danger: "bg-red-50 text-red-600",
+};
+
+export function EmptyState({
+    title,
+    message,
+    icon: Icon = Inbox,  
+    tone = "default",       
+    action,                 
+    bordered = false,  
+    compact = false,        
+}) {
     return (
-        <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-            <Inbox size={28} className="text-neutral-500" aria-hidden="true" />
-            <p className="font-semibold text-heading">{title}</p>
-            {message && <p className="text-sm text-neutral-500">{message}</p>}
+        <div
+            className={`flex flex-col items-center px-6 text-center min-h-120 justify-center bg-white ${compact ? "py-8" : "py-14"} ${
+                bordered ? "rounded-md border border-gray-300" : ""
+            }`}
+        >
+            <span className={`flex size-12 items-center justify-center rounded-md ${TONE[tone] ?? TONE.default}`}>
+                <Icon size={24} aria-hidden="true" />
+            </span>
+
+            <p className="mt-4 font-semibold text-heading">{title}</p>
+
+            {message && (
+                <p className="mt-1 max-w-sm text-sm leading-relaxed text-neutral-500">{message}</p>
+            )}
+
+            {action && <div className="mt-5">{action}</div>}
         </div>
     );
 }

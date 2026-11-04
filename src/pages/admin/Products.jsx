@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { getErrorMessage } from "../../api/client";
 import { useDebouncedValue } from "../../hooks/useDebounce";
 import { formatPrice } from "../../lib/format";
 import { useDeleteProduct, useProducts } from "../../queries/products";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
+import { ConfirmModal } from "../../components/ui/AppModal";
 
 const PAGE_SIZE = 10;
 
@@ -23,6 +25,7 @@ export default function Products() {
     const [searchInput, setSearchInput] = useState("");
     const search = useDebouncedValue(searchInput.trim(), 400);
     const [page, setPage] = useState(1);
+    const [productToDelete, setProductToDelete] = useState(null);
     useDocumentTitle("Products");
 
     const [lastSearch, setLastSearch] = useState(search);
@@ -45,15 +48,25 @@ export default function Products() {
     const failure = error ?? remove.error;
     const errorMessage = failure ? getErrorMessage(failure) : null;
 
-    const handleDelete = (product) => {
-        if (!window.confirm(`Delete "${product.name}"? Its images are removed too.`)) return;
+    const closeDeleteModal = () => {
+        if (!remove.isPending) setProductToDelete(null);
+    };
 
-        remove.mutate(product.id, {
+    const confirmDelete = () => {
+        if (!productToDelete) return;
+
+        const { id, name } = productToDelete;
+
+        remove.mutate(id, {
             onSuccess: () => {
+                setProductToDelete(null);
+                toast.success(`${name} deleted`);
                 if (products.length === 1 && page > 1) setPage((current) => current - 1);
             },
+            // close the modal so the error alert on the page is visible
+            onError: () => setProductToDelete(null),
         });
-    }
+    };
 
     return (
         <div>
@@ -159,7 +172,7 @@ export default function Products() {
                                             </Link>
                                             <button
                                                 type="button"
-                                                onClick={() => handleDelete(product)}
+                                                onClick={() => setProductToDelete(product)}
                                                 disabled={remove.isPending}
                                                 aria-label={`Delete ${product.name}`}
                                                 className="rounded-md p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
@@ -196,6 +209,25 @@ export default function Products() {
                     </button>
                 </div>
             </div>
+
+            {/* Delete product */}
+            <ConfirmModal
+                isOpen={Boolean(productToDelete)}
+                onClose={closeDeleteModal}
+                onConfirm={confirmDelete}
+                destructive
+                icon={Trash2}
+                title="Delete this product?"
+                message={
+                    <>
+                        <span className="font-semibold text-heading">{productToDelete?.name}</span> and its images
+                        will be permanently removed. This can't be undone.
+                    </>
+                }
+                confirmLabel="Delete"
+                pendingLabel="Deleting…"
+                isPending={remove.isPending}
+            />
         </div>
     );
 }

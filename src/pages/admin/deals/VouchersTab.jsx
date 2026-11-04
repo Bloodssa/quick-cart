@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { Copy, Plus, Ticket, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Copy, Plus, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateVoucher, useSetVoucherActive, useVouchers } from "../../../queries/vouchers";
 import { getErrorMessage } from "../../../api/client";
+import { FormModal } from "../../../components/ui/AppModal";
 import {
-    card, EmptyState, field, FilterBar, focusRing, ghostButton, peso,
+    card, field, FilterBar, focusRing, ghostButton, peso,
     primaryButton, roundedFromNow, StatusBadge, when,
 } from "./shared";
+import { EmptyState } from "../../../components/admin/ui";
 
 const FILTERS = [
     ["", "All"], ["Active", "Active"], ["Scheduled", "Scheduled"],
@@ -86,7 +88,7 @@ function VoucherCard({ voucher: v, onToggle, toggling }) {
     );
 }
 
-function NewVoucherForm({ onClose }) {
+function NewVoucherModal({ onClose }) {
     const create = useCreateVoucher();
 
     const [code, setCode] = useState("");
@@ -99,15 +101,28 @@ function NewVoucherForm({ onClose }) {
     const [perUserLimit, setPerUserLimit] = useState("1");
     const [start, setStart] = useState(() => roundedFromNow(10));
     const [end, setEnd] = useState(() => roundedFromNow(60 * 24 * 30));
+    const [formError, setFormError] = useState("");
+
+    // keep the error in view when the form is scrolled down
+    const errorRef = useRef(null);
+    useEffect(() => {
+        if (formError) errorRef.current?.scrollIntoView({ block: "nearest" });
+    }, [formError]);
 
     const submit = (e) => {
         e.preventDefault();
+        setFormError("");
+
+        // the form has noValidate, so run the browser checks (required, min, max) ourselves
+        if (!e.currentTarget.reportValidity()) return;
+
         const startsAt = new Date(start);
         const endsAt = new Date(end);
         if (!(endsAt > startsAt)) {
-            toast.error("The end time must be after the start time.");
+            setFormError("The end time must be after the start time.");
             return;
         }
+
         create.mutate(
             {
                 code,
@@ -121,107 +136,111 @@ function NewVoucherForm({ onClose }) {
                 startsAt: startsAt.toISOString(),
                 endsAt: endsAt.toISOString(),
             },
-            { onSuccess: onClose },
+            {
+                onSuccess: onClose, // only a successful save closes the modal
+                onError: (err) => setFormError(getErrorMessage(err)),
+            },
         );
     };
 
     return (
-        <form onSubmit={submit} className={`${card} flex flex-col gap-4 p-4`}>
-            <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-neutral-900">New voucher</h2>
-                <button
-                    type="button" onClick={onClose} aria-label="Close"
-                    className={`rounded-md p-1 text-neutral-500 hover:bg-gray-100 ${focusRing}`}
-                >
-                    <X size={18} />
-                </button>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                    Code
-                    <input
-                        required minLength={4} maxLength={20} className={`${field} font-mono`} value={code}
-                        onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                        placeholder="WELCOME100"
-                    />
-                    <span className="text-xs text-neutral-500">4 to 20 letters or numbers</span>
-                </label>
-                <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                    Title
-                    <input
-                        required maxLength={80} className={field} value={title}
-                        onChange={(e) => setTitle(e.target.value)} placeholder="Welcome voucher"
-                    />
-                </label>
-
-                <div className="flex flex-col gap-1 text-sm text-neutral-900">
-                    Discount type
-                    <div role="group" aria-label="Discount type" className="flex gap-1">
-                        {[["Percent", "Percentage"], ["Amount", "Amount off"]].map(([id, label]) => (
-                            <button
-                                key={id} type="button" aria-pressed={type === id} onClick={() => setType(id)}
-                                className={`flex-1 rounded-md border px-3 py-2 text-sm ${focusRing} ${type === id
-                                    ? "border-accent-100 bg-accent-50 font-medium text-neutral-900"
-                                    : "border-gray-300 bg-white text-neutral-500 hover:text-neutral-900"}`}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                    {type === "Percent" ? "Percent off (1 to 90)" : "Peso amount off"}
-                    <input
-                        required type="number" step={type === "Percent" ? "1" : "0.01"}
-                        min={type === "Percent" ? "1" : "0.01"} max={type === "Percent" ? "90" : undefined}
-                        className={field} value={value} onChange={(e) => setValue(e.target.value)}
-                    />
-                </label>
-
-                <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                    Minimum spend
-                    <input type="number" min="0" step="0.01" className={field} value={minSpend} onChange={(e) => setMinSpend(e.target.value)} />
-                </label>
-                {type === "Percent" && (
-                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                        Max discount
-                        <input
-                            type="number" min="1" step="0.01" className={field} value={maxDiscount}
-                            onChange={(e) => setMaxDiscount(e.target.value)} placeholder="No cap"
-                        />
-                    </label>
+        <FormModal
+            isOpen
+            onClose={onClose}
+            onSubmit={submit}
+            icon={Ticket}
+            title="New voucher"
+            description="Create a code shoppers can use at checkout."
+            submitLabel="Create voucher"
+            pendingLabel="Creating…"
+            isPending={create.isPending}
+        >
+            <div className="flex flex-col gap-4">
+                {formError && (
+                    <p ref={errorRef} role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+                        {formError}
+                    </p>
                 )}
 
-                <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                    Total uses
-                    <input
-                        type="number" min="1" className={field} value={usageLimit}
-                        onChange={(e) => setUsageLimit(e.target.value)} placeholder="Unlimited"
-                    />
-                </label>
-                <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                    Uses per customer
-                    <input required type="number" min="1" className={field} value={perUserLimit} onChange={(e) => setPerUserLimit(e.target.value)} />
-                </label>
+                <div className="grid gap-3 md:grid-cols-2">
+                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                        Code
+                        <input
+                            required minLength={4} maxLength={20} className={`${field} font-mono`} value={code}
+                            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                            placeholder="WELCOME100"
+                        />
+                        <span className="text-xs text-neutral-500">4 to 20 letters or numbers</span>
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                        Title
+                        <input
+                            required maxLength={80} className={field} value={title}
+                            onChange={(e) => setTitle(e.target.value)} placeholder="Welcome voucher"
+                        />
+                    </label>
 
-                <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                    Starts
-                    <input required type="datetime-local" className={field} value={start} onChange={(e) => setStart(e.target.value)} />
-                </label>
-                <label className="flex flex-col gap-1 text-sm text-neutral-900">
-                    Ends
-                    <input required type="datetime-local" className={field} value={end} onChange={(e) => setEnd(e.target.value)} />
-                </label>
-            </div>
+                    <div className="flex flex-col gap-1 text-sm text-neutral-900">
+                        Discount type
+                        <div role="group" aria-label="Discount type" className="flex gap-1">
+                            {[["Percent", "Percentage"], ["Amount", "Amount off"]].map(([id, label]) => (
+                                <button
+                                    key={id} type="button" aria-pressed={type === id} onClick={() => setType(id)}
+                                    className={`flex-1 rounded-md border px-3 py-2 text-sm ${focusRing} ${type === id
+                                        ? "border-accent-100 bg-accent-50 font-medium text-neutral-900"
+                                        : "border-gray-300 bg-white text-neutral-500 hover:text-neutral-900"}`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                        {type === "Percent" ? "Percent off (1 to 90)" : "Peso amount off"}
+                        <input
+                            required type="number" step={type === "Percent" ? "1" : "0.01"}
+                            min={type === "Percent" ? "1" : "0.01"} max={type === "Percent" ? "90" : undefined}
+                            className={field} value={value} onChange={(e) => setValue(e.target.value)}
+                        />
+                    </label>
 
-            <div className="flex justify-end gap-2">
-                <button type="button" onClick={onClose} className={ghostButton}>Cancel</button>
-                <button type="submit" disabled={create.isPending} className={primaryButton}>
-                    {create.isPending ? "Creating" : "Create voucher"}
-                </button>
+                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                        Minimum spend
+                        <input type="number" min="0" step="0.01" className={field} value={minSpend} onChange={(e) => setMinSpend(e.target.value)} />
+                    </label>
+                    {type === "Percent" && (
+                        <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                            Max discount
+                            <input
+                                type="number" min="1" step="0.01" className={field} value={maxDiscount}
+                                onChange={(e) => setMaxDiscount(e.target.value)} placeholder="No cap"
+                            />
+                        </label>
+                    )}
+
+                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                        Total uses
+                        <input
+                            type="number" min="1" className={field} value={usageLimit}
+                            onChange={(e) => setUsageLimit(e.target.value)} placeholder="Unlimited"
+                        />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                        Uses per customer
+                        <input required type="number" min="1" className={field} value={perUserLimit} onChange={(e) => setPerUserLimit(e.target.value)} />
+                    </label>
+
+                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                        Starts
+                        <input required type="datetime-local" className={field} value={start} onChange={(e) => setStart(e.target.value)} />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm text-neutral-900">
+                        Ends
+                        <input required type="datetime-local" className={field} value={end} onChange={(e) => setEnd(e.target.value)} />
+                    </label>
+                </div>
             </div>
-        </form>
+        </FormModal>
     );
 }
 
@@ -235,14 +254,12 @@ export default function VouchersTab() {
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <FilterBar label="Filter vouchers by status" options={FILTERS} value={status} onChange={setStatus} />
-                {!creating && (
-                    <button type="button" onClick={() => setCreating(true)} className={`${primaryButton} flex items-center gap-1.5`}>
-                        <Plus size={16} /> New voucher
-                    </button>
-                )}
+                <button type="button" onClick={() => setCreating(true)} className={`${primaryButton} flex items-center gap-1.5`}>
+                    <Plus size={16} /> New voucher
+                </button>
             </div>
 
-            {creating && <NewVoucherForm onClose={() => setCreating(false)} />}
+            {creating && <NewVoucherModal onClose={() => setCreating(false)} />}
 
             {isError ? (
                 <p className="text-sm text-red-700">{getErrorMessage(error)}</p>
@@ -250,6 +267,7 @@ export default function VouchersTab() {
                 <p className="text-sm text-neutral-500">Loading vouchers</p>
             ) : vouchers.length === 0 ? (
                 <EmptyState
+                    bordered="true"
                     icon={Ticket} title="No vouchers here yet"
                     text="Create a code with a minimum spend and a usage limit, then share it with shoppers."
                 />

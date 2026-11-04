@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { MessageSquare, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { getErrorMessage } from "../../api/client";
 import { formatDate } from "../../lib/format";
 import { useAdminDeleteReview, useDeleteReply, useReplyToReview } from "../../queries/adminReviews";
 import PhotoLightbox from "../reviews/PhotoLightbox";
 import StarRating from "../reviews/StarRating";
+import { ConfirmModal, useModal } from "../ui/AppModal";
 import { inputCls, primaryBtn, secondaryBtn } from "../admin/ui";
 
 const MAX_REPLY = 1000;
@@ -50,7 +54,35 @@ export default function ReviewCard({ review }) {
     const [viewing, setViewing] = useState(null);
     const removeReply = useDeleteReply();
     const removeReview = useAdminDeleteReview();
+    const deleteReviewModal = useModal();
+    const deleteReplyModal = useModal();
     const images = review.images ?? [];
+
+    function confirmDeleteReview() {
+        removeReview.mutate(review.id, {
+            onSuccess: () => {
+                deleteReviewModal.close();
+                toast.success("Review deleted");
+            },
+            onError: (err) => {
+                deleteReviewModal.close();
+                toast.error(getErrorMessage(err));
+            },
+        });
+    }
+
+    function confirmDeleteReply() {
+        removeReply.mutate(review.id, {
+            onSuccess: () => {
+                deleteReplyModal.close();
+                toast.success("Reply deleted");
+            },
+            onError: (err) => {
+                deleteReplyModal.close();
+                toast.error(getErrorMessage(err));
+            },
+        });
+    }
 
     return (
         <li className="rounded-md border border-gray-300 bg-white p-5">
@@ -68,7 +100,7 @@ export default function ReviewCard({ review }) {
                 <button
                     type="button"
                     disabled={removeReview.isPending}
-                    onClick={() => window.confirm("Delete this review permanently? Only do this for spam or abuse.") && removeReview.mutate(review.id)}
+                    onClick={deleteReviewModal.open}
                     className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"
                 >
                     Delete review
@@ -107,7 +139,7 @@ export default function ReviewCard({ review }) {
                             <button
                                 type="button"
                                 disabled={removeReply.isPending}
-                                onClick={() => window.confirm("Delete your reply?") && removeReply.mutate(review.id)}
+                                onClick={deleteReplyModal.open}
                                 className="text-red-600 hover:underline disabled:opacity-50"
                             >
                                 Delete reply
@@ -122,6 +154,40 @@ export default function ReviewCard({ review }) {
             {viewing !== null && (
                 <PhotoLightbox images={images} index={viewing} onIndexChange={setViewing} onClose={() => setViewing(null)} />
             )}
+
+            {/* Delete review */}
+            <ConfirmModal
+                isOpen={deleteReviewModal.isOpen}
+                onClose={deleteReviewModal.close}
+                onConfirm={confirmDeleteReview}
+                destructive
+                icon={Trash2}
+                title="Delete this review?"
+                message={
+                    <>
+                        The review by <span className="font-semibold text-heading">{review.customerName}</span> on{" "}
+                        <span className="font-semibold text-heading">{review.productName}</span> will be permanently
+                        removed. Only do this for spam or abuse. This can't be undone.
+                    </>
+                }
+                confirmLabel="Delete review"
+                pendingLabel="Deleting…"
+                isPending={removeReview.isPending}
+            />
+
+            {/* Delete reply */}
+            <ConfirmModal
+                isOpen={deleteReplyModal.isOpen}
+                onClose={deleteReplyModal.close}
+                onConfirm={confirmDeleteReply}
+                destructive
+                icon={MessageSquare}
+                title="Delete your reply?"
+                message="Your public reply will be removed from this review. You can write a new one afterwards."
+                confirmLabel="Delete reply"
+                pendingLabel="Deleting…"
+                isPending={removeReply.isPending}
+            />
         </li>
     );
 }

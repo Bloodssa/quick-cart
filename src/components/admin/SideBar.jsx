@@ -84,7 +84,7 @@ const Sidebar = ({
 
                 {/* Nav */}
                 <div className="flex flex-1 flex-col overflow-y-auto">
-                    <nav className="px-4 py-6">
+                    <nav className="px-4 py-4">
                         {sidebarSections.map((section, sectionIndex) => {
                             const items = section.items.filter((item) => !item.adminOnly || isAdmin);
                             if (items.length === 0) return null;

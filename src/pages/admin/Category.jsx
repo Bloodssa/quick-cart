@@ -1,38 +1,78 @@
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { getErrorMessage } from "../../api/client";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
-import ConfirmDeleteModal from "../../components/ConfirmModal";
-import { Card, EmptyState, ErrorState, PageHeader, TableSkeleton, Th, inputCls, primaryBtn, secondaryBtn, smallBtn, tdCls } from "../../components/admin/ui";
+import { ConfirmModal, FormModal } from "../../components/ui/AppModal";
+import { Card, EmptyState, ErrorState, PageHeader, TableSkeleton, Th, inputCls, primaryBtn, smallBtn, tdCls } from "../../components/admin/ui";
 import { useCategories, useDeleteCategory, useSaveCategory } from "../../queries/categories";
 
-function CategoryForm({ category, onDone }) {
+function CategoryModal({ category, onClose }) {
+    const bodyRef = useRef(null);
     const [name, setName] = useState(category.name ?? "");
+    const [formError, setFormError] = useState("");
     const save = useSaveCategory();
     const isEdit = !!category.id;
-    const invalid = name.trim().length < 2;
+
+    useEffect(() => {
+        bodyRef.current?.querySelector("input")?.focus();
+    }, []);
 
     function submit(e) {
         e.preventDefault();
-        if (invalid) return;
-        save.mutate({ id: category.id, name: name.trim() }, { onSuccess: onDone });
+        setFormError("");
+
+        const trimmed = name.trim();
+        if (trimmed.length < 2) {
+            setFormError("Category name must be at least 2 characters.");
+            return;
+        }
+
+        save.mutate(
+            { id: category.id, name: trimmed },
+            {
+                onSuccess: () => {
+                    toast.success(isEdit ? "Category updated" : "Category added");
+                    onClose(); // only a successful save closes the modal
+                },
+                onError: (err) => setFormError(getErrorMessage(err)),
+            }
+        );
     }
 
     return (
-        <Card className="p-5">
-            <form onSubmit={submit} className="flex flex-col gap-4">
-                <h2 className="text-base font-bold">{isEdit ? "Edit category" : "New category"}</h2>
+        <FormModal
+            isOpen
+            onClose={onClose}
+            onSubmit={submit}
+            icon={isEdit ? Pencil : Plus}
+            title={isEdit ? "Edit category" : "New category"}
+            submitLabel="Save"
+            isPending={save.isPending}
+            size="sm"
+        >
+            <div ref={bodyRef} className="space-y-4">
+                {formError && (
+                    <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+                        {formError}
+                    </p>
+                )}
+
                 <div>
-                    <label htmlFor="cat-name" className="text-sm font-semibold">Name</label>
-                    <input id="cat-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={`${inputCls} mt-1.5`} />
+                    <label htmlFor="cat-name" className="text-sm font-semibold text-heading">Name</label>
+                    <input
+                        id="cat-name"
+                        value={name}
+                        onChange={(e) => {
+                            setName(e.target.value);
+                            setFormError("");
+                        }}
+                        maxLength={60}
+                        className={`${inputCls} mt-1.5`}
+                    />
                 </div>
-                <div className="flex justify-end gap-3">
-                    <button type="button" onClick={onDone} className={secondaryBtn}>Cancel</button>
-                    <button type="submit" disabled={invalid || save.isPending} className={primaryBtn}>
-                        {save.isPending ? "Saving…" : "Save"}
-                    </button>
-                </div>
-            </form>
-        </Card>
+            </div>
+        </FormModal>
     );
 }
 
@@ -44,6 +84,22 @@ export default function Categories() {
     const { data, isPending, isError, refetch } = useCategories();
     const del = useDeleteCategory();
     const items = data ?? [];
+
+    function confirmDelete() {
+        if (!deleteTarget) return;
+        const { id, name } = deleteTarget;
+
+        del.mutate(id, {
+            onSuccess: () => {
+                setDeleteTarget(null);
+                toast.success(`${name} deleted`);
+            },
+            onError: (err) => {
+                setDeleteTarget(null);
+                toast.error(getErrorMessage(err));
+            },
+        });
+    }
 
     return (
         <div className="flex flex-col gap-5">
@@ -57,51 +113,57 @@ export default function Categories() {
                 }
             />
 
-            <div className="flex flex-wrap items-start gap-4">
-                <Card className="min-w-0 flex-[2_1_520px] overflow-hidden">
-                    {isPending ? <TableSkeleton /> : isError ? <ErrorState onRetry={refetch} /> : items.length === 0 ? (
-                        <EmptyState title="No categories yet" message="Create your first category to organize products." />
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-120 border-collapse">
-                                <thead><tr><Th>Name</Th><Th>Products</Th><Th align="right">Actions</Th></tr></thead>
-                                <tbody>
-                                    {items.map((c) => (
-                                        <tr key={c.id}>
-                                            <td className={`${tdCls} font-semibold`}>{c.name}</td>
-                                            <td className={tdCls}>{c.productCount ?? "–"}</td>
-                                            <td className={`${tdCls} text-right`}>
-                                                <div className="flex justify-end gap-2">
-                                                    <button type="button" className={smallBtn} onClick={() => setEditing(c)}>Edit</button>
-                                                    <button type="button" className={`${smallBtn} text-red-600`} disabled={c.productCount > 0}
-                                                        title={c.productCount > 0 ? "Move or delete its products first" : undefined}
-                                                        onClick={() => setDeleteTarget(c)}>Delete</button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Card>
-
-                {editing && (
-                    <div className="min-w-0 flex-[1_1_300px]">
-                        <CategoryForm key={editing.id ?? "new"} category={editing} onDone={() => setEditing(null)} />
+            <Card className="min-w-0 overflow-hidden">
+                {isPending ? <TableSkeleton /> : isError ? <ErrorState onRetry={refetch} /> : items.length === 0 ? (
+                    <EmptyState title="No categories yet" message="Create your first category to organize products." />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-120 border-collapse">
+                            <thead><tr><Th>Name</Th><Th>Products</Th><Th align="right">Actions</Th></tr></thead>
+                            <tbody>
+                                {items.map((c) => (
+                                    <tr key={c.id}>
+                                        <td className={`${tdCls} font-semibold`}>{c.name}</td>
+                                        <td className={tdCls}>{c.productCount ?? "–"}</td>
+                                        <td className={`${tdCls} text-right`}>
+                                            <div className="flex justify-end gap-2">
+                                                <button type="button" className={smallBtn} onClick={() => setEditing(c)}>Edit</button>
+                                                <button type="button" className={`${smallBtn} text-red-600`} disabled={c.productCount > 0}
+                                                    title={c.productCount > 0 ? "Move or delete its products first" : undefined}
+                                                    onClick={() => setDeleteTarget(c)}>Delete</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 )}
-            </div>
+            </Card>
 
-            {deleteTarget && (
-                <ConfirmDeleteModal
-                    title="Delete category?"
-                    message={`"${deleteTarget.name}" will be permanently removed.`}
-                    loading={del.isPending}
-                    onConfirm={() => del.mutate(deleteTarget.id, { onSettled: () => setDeleteTarget(null) })}
-                    onClose={() => setDeleteTarget(null)}
-                />
+            {/* Add / edit category */}
+            {editing && (
+                <CategoryModal key={editing.id ?? "new"} category={editing} onClose={() => setEditing(null)} />
             )}
+
+            {/* Delete category */}
+            <ConfirmModal
+                isOpen={Boolean(deleteTarget)}
+                onClose={() => !del.isPending && setDeleteTarget(null)}
+                onConfirm={confirmDelete}
+                destructive
+                icon={Trash2}
+                title="Delete category?"
+                message={
+                    <>
+                        <span className="font-semibold text-heading">{deleteTarget?.name}</span> will be
+                        permanently removed. This can't be undone.
+                    </>
+                }
+                confirmLabel="Delete"
+                pendingLabel="Deleting…"
+                isPending={del.isPending}
+            />
         </div>
     );
 }
