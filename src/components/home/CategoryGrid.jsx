@@ -5,7 +5,7 @@ import homeImage from "../../assets/images/category/home.jpg";
 import apparelImage from "../../assets/images/category/apparel.jpg";
 import personalImage from "../../assets/images/category/personal.jpg";
 import sportsImage from "../../assets/images/category/sports.jpg";
-import healthImage from "../../assets/images/category/health.jpg";
+import construction from "../../assets/images/category/const.png"
 import groceryImage from "../../assets/images/category/grocery.jpg";
 import toysImage from "../../assets/images/category/toys.jpg";
 import booksImage from "../../assets/images/category/books.jpg";
@@ -17,7 +17,7 @@ const categories = [
     { id: 11, name: "Fashion & Apparel", image: apparelImage },
     { id: 12, name: "Beauty & Personal Care", image: personalImage },
     { id: 13, name: "Sports & Fitness", image: sportsImage },
-    { id: 14, name: "Health & Wellness", image: healthImage },
+    { id: 18, name: "Home Construction & Hardware", image: construction },
     { id: 15, name: "Groceries & Essentials", image: groceryImage },
     { id: 16, name: "Toys, Kids & Baby", image: toysImage },
     { id: 17, name: "Books & Stationery", image: booksImage },
