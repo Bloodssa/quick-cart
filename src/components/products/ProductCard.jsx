@@ -39,20 +39,33 @@ const ProductCard = ({ product }) => {
                         {name}
                     </h3>
 
-                    
-                    {reviewCount > 0 && (
-                        <p
-                            className="mt-1 flex items-center gap-1 text-xs text-neutral-500"
-                            title={`${averageRating.toFixed(1)} out of 5 from ${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`}
-                        >
-                            <Star size={13} aria-hidden="true" className="fill-amber-400 text-amber-400" />
-                            <span className="font-semibold text-neutral-900">{averageRating.toFixed(1)}</span>
-                            <span>({formatSold(reviewCount)})</span>
-                        </p>
-                    )}
+
+                    <p
+                        className="mt-1 flex h-5 items-center gap-1 text-xs text-neutral-500"
+                        title={
+                            reviewCount > 0
+                                ? `${averageRating.toFixed(1)} out of 5 from ${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`
+                                : "No reviews yet"
+                        }
+                    >
+                        {reviewCount > 0 ? (
+                            <>
+                                <Star size={13} aria-hidden="true" className="fill-amber-400 text-amber-400" />
+                                <span className="font-semibold text-neutral-900">{averageRating.toFixed(1)}</span>
+                                <span>({formatSold(reviewCount)})</span>
+                            </>
+                        ) : (
+                            <>
+                                <Star size={13} aria-hidden="true" className="text-gray-300" />
+                                <span>No reviews yet</span>
+                            </>
+                        )}
+                    </p>
 
                     <PriceTag product={product} className="mt-2 text-base" />
-                    <DealEnds product={product} />
+                    <div className="min-h-4">
+                        <DealEnds product={product} />
+                    </div>
 
                     <div className="mt-auto flex items-center justify-between gap-2 pt-1 text-xs">
                         <span className={inStock ? "text-green-600" : "text-red-500"}>
