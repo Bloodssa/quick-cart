@@ -3,6 +3,7 @@ import { Minus, Plus } from "lucide-react";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { Card, EmptyState, ErrorState, PageHeader, Pagination, Pill, StatCard, TableSkeleton, Th, inputCls, smallBtn, tdCls } from "../../components/admin/ui";
 import { useAdjustStock, useProducts, useStockSummary } from "../../queries/products";
+import { useCategories } from "../../queries/categories";
 
 const PAGE_SIZE = 10;
 const LOW_STOCK = 10;
@@ -42,10 +43,16 @@ export default function Inventory() {
     useDocumentTitle("Inventory");
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState("all");
+    const [categoryId, setCategoryId] = useState("");
     const [page, setPage] = useState(1);
 
-    // Loads the catalog once; search, filters and paging happen locally
-    const { data, isPending, isError, refetch } = useProducts({ pageSize: 100 });
+    const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+
+    // Loads the catalog once per category; search, stock filters and paging happen locally
+    const { data, isPending, isError, refetch, isPlaceholderData } = useProducts({
+        pageSize: 100,
+        categoryId: categoryId || undefined,
+    });
 
     const all = useMemo(
         () => (data?.products ?? []).map((p) => ({
@@ -70,6 +77,20 @@ export default function Inventory() {
     const safePage = Math.min(page, totalPages);
     const rows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
+    const filtering = Boolean(q.trim() || filter !== "all" || categoryId);
+
+    const handleCategoryChange = (event) => {
+        setCategoryId(event.target.value);
+        setPage(1); // a different filter starts from the first page
+    };
+
+    const clearFilters = () => {
+        setQ("");
+        setFilter("all");
+        setCategoryId("");
+        setPage(1);
+    };
+
     return (
         <div className="flex flex-col gap-5">
             <PageHeader title="Inventory" subtitle="Adjust stock by an amount so two admins never overwrite each other." />
@@ -81,22 +102,41 @@ export default function Inventory() {
             </div>
 
             <Card className="overflow-hidden">
-                <div className="flex flex-wrap items-center gap-2 border-b border-gray-300 p-4">
-                    <label htmlFor="inv-q" className="sr-only">Search products</label>
-                    <input id="inv-q" type="search" placeholder="Search product" value={q}
-                        onChange={(e) => { setQ(e.target.value); setPage(1); }} className={`${inputCls} max-w-xs flex-1`} />
-                    {FILTERS.map((f) => (
-                        <button key={f.value} type="button" aria-pressed={filter === f.value}
-                            onClick={() => { setFilter(f.value); setPage(1); }}
-                            className={`h-9 rounded-full border px-4 text-xs font-semibold ${filter === f.value ? "border-accent-300 bg-accent-50 text-accent-300" : "border-gray-300 hover:bg-gray-50"}`}>
-                            {f.label}
-                        </button>
-                    ))}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 p-4">
+                    <div className="w-full sm:w-72">
+                        <label htmlFor="inv-q" className="sr-only">Search products</label>
+                        <input id="inv-q" type="search" placeholder="Search product" value={q}
+                            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+                            className={`${inputCls} w-full`} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <select value={categoryId} onChange={handleCategoryChange} disabled={categoriesLoading}
+                            aria-label="Filter by category"
+                            className="h-9 w-44 rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-accent-300 focus:outline-none disabled:opacity-60">
+                            <option value="">All categories</option>
+                            {categories.map((c) => (
+                                <option key={c.id} value={String(c.id)}>{c.name}</option>
+                            ))}
+                        </select>
+                        {FILTERS.map((f) => (
+                            <button key={f.value} type="button" aria-pressed={filter === f.value}
+                                onClick={() => { setFilter(f.value); setPage(1); }}
+                                className={`h-9 rounded-full border px-4 text-xs font-semibold ${filter === f.value ? "border-accent-300 bg-accent-50 text-accent-300" : "border-gray-300 hover:bg-gray-50"}`}>
+                                {f.label}
+                            </button>
+                        ))}
+                        {filtering && (
+                            <button type="button" onClick={clearFilters}
+                                className="h-9 rounded-md bg-accent-300 px-4 text-xs font-semibold text-white hover:bg-accent-hover">
+                                Clear filters
+                            </button>
+                        )}
+                    </div>
                 </div>
                 {isPending ? <TableSkeleton /> : isError ? <ErrorState onRetry={refetch} /> : rows.length === 0 ? (
                     <EmptyState title="No products found" message="Try a different search or filter." />
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className={`overflow-x-auto ${isPlaceholderData ? "opacity-60" : ""}`}>
                         <table className="w-full min-w-180 border-collapse">
                             <thead><tr><Th>Product</Th><Th>Category</Th><Th>In stock</Th><Th>Status</Th><Th align="right">Adjust stock</Th></tr></thead>
                             <tbody>

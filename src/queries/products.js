@@ -1,5 +1,6 @@
 import { 
     keepPreviousData, 
+    useInfiniteQuery,
     useMutation, 
     useQuery, 
     useQueryClient 
@@ -84,3 +85,15 @@ export const useStockSummary = () =>
 
 export const useDeleteProductImage = () => useImageMutation(({ productId, imageId }) => deleteProductImage(productId, imageId));
 export const useSetDefaultImage = () => useImageMutation(({ productId, imageId }) => setDefaultProductImage(productId, imageId));
+
+export const useInfiniteProducts = (params) =>
+    useInfiniteQuery({
+        queryKey: [...productKeys.lists(), "infinite", params],
+        queryFn: ({ pageParam, signal }) => getProducts({ ...params, page: pageParam }, signal),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage, allPages) => {
+            const loaded = allPages.reduce((count, p) => count + p.products.length, 0);
+            return loaded < lastPage.totalResults ? allPages.length + 1 : undefined; // undefined = no more pages
+        },
+        placeholderData: keepPreviousData,
+    });

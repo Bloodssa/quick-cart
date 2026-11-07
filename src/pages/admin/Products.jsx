@@ -6,6 +6,7 @@ import { getErrorMessage } from "../../api/client";
 import { useDebouncedValue } from "../../hooks/useDebounce";
 import { formatPrice } from "../../lib/format";
 import { useDeleteProduct, useProducts } from "../../queries/products";
+import { useCategories } from "../../queries/categories";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { ConfirmModal } from "../../components/ui/AppModal";
 
@@ -24,9 +25,12 @@ function SkeletonRows() {
 export default function Products() {
     const [searchInput, setSearchInput] = useState("");
     const search = useDebouncedValue(searchInput.trim(), 400);
+    const [categoryId, setCategoryId] = useState("");
     const [page, setPage] = useState(1);
     const [productToDelete, setProductToDelete] = useState(null);
     useDocumentTitle("Products");
+
+    const { data: categories = [], isLoading: categoriesLoading } = useCategories();
 
     const [lastSearch, setLastSearch] = useState(search);
     if (search !== lastSearch) {
@@ -38,6 +42,7 @@ export default function Products() {
         page,
         pageSize: PAGE_SIZE,
         search: search || undefined,
+        categoryId: categoryId || undefined,
     });
     const remove = useDeleteProduct();
 
@@ -45,8 +50,22 @@ export default function Products() {
     const totalResults = data?.totalResults ?? 0;
     const totalPages = data ? Math.max(1, Math.ceil(data.totalResults / data.pageSize)) : 1;
 
+    const filtering = Boolean(search || categoryId);
+    const selectedCategoryName = categories.find((c) => String(c.id) === categoryId)?.name;
+
     const failure = error ?? remove.error;
     const errorMessage = failure ? getErrorMessage(failure) : null;
+
+    const handleCategoryChange = (event) => {
+        setCategoryId(event.target.value);
+        setPage(1); // a different filter starts from the first page
+    };
+
+    const clearFilters = () => {
+        setSearchInput("");
+        setCategoryId("");
+        setPage(1);
+    };
 
     const closeDeleteModal = () => {
         if (!remove.isPending) setProductToDelete(null);
@@ -73,7 +92,11 @@ export default function Products() {
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold text-heading">Products</h1>
-                    <p className="text-sm text-neutral-500">{isPending ? "Loading…" : `${totalResults} products`}</p>
+                    <p className="text-sm text-neutral-500">
+                        {isPending
+                            ? "Loading…"
+                            : `${totalResults} ${totalResults === 1 ? "product" : "products"}${selectedCategoryName ? ` in ${selectedCategoryName}` : ""}`}
+                    </p>
                 </div>
                 <Link
                     to="/admin/products/new"
@@ -84,26 +107,56 @@ export default function Products() {
                 </Link>
             </div>
 
-            <div role="search" className="relative mb-4 max-w-sm">
-                <Search size={16} aria-hidden="true" className="absolute top-1/2 left-3 -translate-y-1/2 text-neutral-400" />
-                <input
-                    value={searchInput}
-                    onChange={(event) => setSearchInput(event.target.value)}
-                    onKeyDown={(event) => event.key === "Escape" && setSearchInput("")}
-                    aria-label="Search products by name"
-                    placeholder="Search by product name…"
-                    className="h-11 w-full rounded-md border border-gray-300 bg-white pr-9 pl-9 text-sm focus:border-accent-100 focus:ring-2 focus:ring-accent-100/20 focus:outline-none"
-                />
-                {searchInput && (
-                    <button
-                        type="button"
-                        onClick={() => setSearchInput("")}
-                        aria-label="Clear search"
-                        className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-neutral-400 hover:text-neutral-700"
+            {/* filters */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div role="search" className="relative w-full sm:w-80">
+                    <Search size={16} aria-hidden="true" className="absolute top-1/2 left-3 -translate-y-1/2 text-neutral-400" />
+                    <input
+                        value={searchInput}
+                        onChange={(event) => setSearchInput(event.target.value)}
+                        onKeyDown={(event) => event.key === "Escape" && setSearchInput("")}
+                        aria-label="Search products by name"
+                        placeholder="Search by product name…"
+                        className="h-11 w-full rounded-md border border-gray-300 bg-white pr-9 pl-9 text-sm focus:border-accent-100 focus:ring-2 focus:ring-accent-100/20 focus:outline-none"
+                    />
+                    {searchInput && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchInput("")}
+                            aria-label="Clear search"
+                            className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-neutral-400 hover:text-neutral-700"
+                        >
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex w-full items-center gap-3 sm:w-auto">
+                    {filtering && (
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            className="h-11 shrink-0 rounded-md bg-accent-100 px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+                        >
+                            Clear filters
+                        </button>
+                    )}
+
+                    <select
+                        value={categoryId}
+                        onChange={handleCategoryChange}
+                        disabled={categoriesLoading}
+                        aria-label="Filter by category"
+                        className="h-11 min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 text-sm text-heading focus:border-accent-100 focus:ring-2 focus:ring-accent-100/20 focus:outline-none disabled:opacity-60 sm:w-56 sm:flex-none"
                     >
-                        <X size={16} />
-                    </button>
-                )}
+                        <option value="">All categories</option>
+                        {categories.map((category) => (
+                            <option key={category.id} value={String(category.id)}>
+                                {category.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {errorMessage && (
@@ -129,7 +182,7 @@ export default function Products() {
                         {!isPending && !isPlaceholderData && products.length === 0 && (
                             <tr>
                                 <td colSpan={5} className="px-4 py-10 text-center text-neutral-500">
-                                    {search ? `No products match "${search}".` : "No products found."}
+                                    {filtering ? "No products match your filters." : "No products found."}
                                 </td>
                             </tr>
                         )}

@@ -9,27 +9,27 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const HomePage = () => {
     useDocumentTitle("Home");
-    
+
     return (
         <HomeLayout>
             <HeroSlider />
             <FeatureBar />
             <CategoryGrid />
 
-            {/* Featured Section */}
+            {/* Deals */}
             <ProductShelf
-                title="Featured Products"
-                params={{ featured: true, page: 1, pageSize: 10 }}
+                title="Hot Deals"
+                params={{ onDeal: true, page: 1, pageSize: 10 }}
                 viewAllLink="/products?deals=true"
                 columns={6}
             />
 
             <PromoBanner />
 
-            {/* Trending Section */}
+            {/* Trending */}
             <ProductShelf
                 title="Trending Now"
-                params={{ sort: "popular", page: 1, pageSize: 10 }}
+                params={{ bestSellers: true, sort: "popular", page: 1, pageSize: 10 }}
                 viewAllLink="/products?bestSellers=true&sort=popular"
                 columns={5}
             />
@@ -37,10 +37,10 @@ const HomePage = () => {
             {/* Collections */}
             <CollectionTiles />
 
-            {/* New Arrival Section */}
+            {/* New arrivals */}
             <ProductShelf
                 title="New Arrivals"
-                params={{ sort: "newest", page: 1, pageSize: 8 }}
+                params={{ newArrivals: true, sort: "newest", page: 1, pageSize: 8 }}
                 viewAllLink="/products?newArrivals=true&sort=newest"
                 columns={5}
             />
