@@ -17,6 +17,10 @@ const PAYMENT_METHODS = [
     { value: "COD", label: "Cash on delivery", hint: "Pay when your order arrives." }, // cod for now
 ];
 
+// explicit "nothing chosen" value for the address and payment pickers
+const NONE = "none";
+const REQUIRED_FIELDS_MESSAGE = "Please complete all required checkout fields.";
+
 export default function Checkout() {
     useDocumentTitle("Checkout");
     const navigate = useNavigate();
@@ -35,8 +39,10 @@ export default function Checkout() {
     const { data: addresses = [], isPending: addressesPending } = useAddresses();
     const placeOrder = usePlaceOrder();
 
-    const [pickedAddressId, setPickedAddressId] = useState(null);
-    const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0].value);
+    // address and payment both start on "None" until the customer picks one
+    const [pickedAddressId, setPickedAddressId] = useState(NONE);
+    const [paymentMethod, setPaymentMethod] = useState(NONE);
+    const [attempted, setAttempted] = useState(false);
     const [addressModalOpen, setAddressModalOpen] = useState(false);
 
     // voucher: what is typed, and the code the server is asked to check
@@ -50,8 +56,11 @@ export default function Checkout() {
 
     const stockProblem = items.some((i) => i.stockQuantity === 0 || i.quantity > i.stockQuantity);
 
-    // default to the default address until the user picks another
-    const addressId = pickedAddressId ?? (addresses.find((a) => a.isDefault) ?? addresses[0])?.id ?? null;
+    // "None" means no address; the server preview waits for a real pick
+    const addressNone = pickedAddressId === NONE;
+    const addressId = addressNone ? null : pickedAddressId;
+    const paymentNone = paymentMethod === NONE;
+    const missingFields = addressId === null || paymentNone;
 
     const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
     const cartSubTotal = items.reduce((sum, i) => sum + i.subTotal, 0);
@@ -76,9 +85,11 @@ export default function Checkout() {
                 ? "refused"
                 : "applied";
 
+    // a missing address or payment never disables the button: clicking it shows the required-fields message
     const canPlace =
-        !invalid && items.length > 0 && !stockProblem && addressId !== null &&
-        !placeOrder.isPending && Boolean(preview) && !previewing && voucherState !== "refused";
+        !placeOrder.isPending &&
+        (missingFields ||
+            (!invalid && items.length > 0 && !stockProblem && Boolean(preview) && !previewing && voucherState !== "refused"));
 
     function applyVoucher(e) {
         e.preventDefault();
@@ -91,6 +102,11 @@ export default function Checkout() {
     }
 
     function handlePlaceOrder() {
+        if (missingFields) {
+            setAttempted(true);
+            toast.error(REQUIRED_FIELDS_MESSAGE);
+            return;
+        }
         placeOrder.mutate(
             // only an accepted code is sent
             { addressId, paymentMethod, cartItemIds: ids, voucherCode: preview?.voucherCode ?? null },
@@ -164,6 +180,24 @@ export default function Checkout() {
                                 </p>
                             ) : (
                                 <div role="radiogroup" aria-label="Delivery address" className="mt-4 grid gap-3 md:grid-cols-2">
+                                    <label
+                                        className={`flex cursor-pointer gap-3 rounded-md border p-4 transition-colors ${addressNone
+                                            ? "border-accent-100 bg-accent-50"
+                                            : "border-gray-300 hover:bg-gray-50"
+                                            }`}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="address"
+                                            checked={addressNone}
+                                            onChange={() => setPickedAddressId(NONE)}
+                                            className="mt-1 size-4 shrink-0 accent-accent-100"
+                                        />
+                                        <span className="text-sm">
+                                            <span className="block font-semibold text-heading">None</span>
+                                            <span className="block text-neutral-500">Do not use a saved address.</span>
+                                        </span>
+                                    </label>
                                     {addresses.map((a) => (
                                         <label
                                             key={a.id}
@@ -203,6 +237,24 @@ export default function Checkout() {
                         <section className="rounded-md border border-gray-300 bg-white p-5">
                             <h2 className="font-bold text-heading">2. Payment method</h2>
                             <div role="radiogroup" aria-label="Payment method" className="mt-4 grid gap-3 md:grid-cols-2">
+                                <label
+                                    className={`flex cursor-pointer gap-3 rounded-md border p-4 transition-colors ${paymentNone
+                                        ? "border-accent-100 bg-accent-50"
+                                        : "border-gray-300 hover:bg-gray-50"
+                                        }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="payment"
+                                        checked={paymentNone}
+                                        onChange={() => setPaymentMethod(NONE)}
+                                        className="mt-1 size-4 shrink-0 accent-accent-100"
+                                    />
+                                    <span className="text-sm">
+                                        <span className="block font-semibold text-heading">None</span>
+                                        <span className="block text-neutral-500">Do not choose a payment method.</span>
+                                    </span>
+                                </label>
                                 {PAYMENT_METHODS.map((method) => (
                                     <label
                                         key={method.value}
@@ -381,8 +433,8 @@ export default function Checkout() {
                             {placeOrder.isPending ? "Placing order…" : "Place order"}
                         </button>
 
-                        {addressId === null && (
-                            <p className="mt-2 text-center text-xs text-amber-600">Add a delivery address to continue.</p>
+                        {attempted && missingFields && (
+                            <p role="alert" className="mt-2 text-center text-xs text-red-600">{REQUIRED_FIELDS_MESSAGE}</p>
                         )}
                         {stockProblem && (
                             <p className="mt-2 text-center text-xs text-amber-600">Fix the stock problems above first.</p>
