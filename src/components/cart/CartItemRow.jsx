@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { formatPrice } from "../../lib/format";
 import QuantityStepper from "./QuantityStepper";
 import Checkbox from "../ui/Checkbox";
+import { toast } from "sonner";
 
 const MAX_PER_ITEM = 99;
 const STEPPER_DEBOUNCE_MS = 600;
@@ -43,6 +44,15 @@ export default function CartItemRow({
     }
 
     const maxQuantity = Math.min(item.stockQuantity, MAX_PER_ITEM);
+    function handleLimitReached() {
+        const message =
+            item.stockQuantity <= MAX_PER_ITEM
+                ? "Requested quantity exceeds available stock."
+                : `Maximum quantity per order is ${MAX_PER_ITEM} units.`;
+
+        toast.error(message, { id: `qty-limit-${item.id}` });   // id stops repeated clicks stacking toasts
+    }
+
     const imageSrc = item.imageUrl;
 
     const outOfStock = item.stockQuantity === 0;
@@ -91,6 +101,7 @@ export default function CartItemRow({
                             max={maxQuantity}
                             disabled={outOfStock}
                             onChange={handleQuantityChange}
+                            onLimitReached={handleLimitReached}
                         />
                     )}
                     <button

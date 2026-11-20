@@ -1,7 +1,16 @@
 import { Minus, Plus } from "lucide-react";
 
-export default function QuantityStepper({ value, max, disabled = false, onChange }) {
+export default function QuantityStepper({ value, max, disabled = false, onChange, onLimitReached }) {
     const buttonClass = "grid h-full w-9 place-items-center hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40";
+    const atMax = value >= max;
+
+    function handleIncrease() {
+        if (atMax) {
+            onLimitReached?.();   // show the toast, don't change the quantity
+            return;
+        }
+        onChange(value + 1);
+    }
 
     return (
         <div className="inline-flex h-9 items-center overflow-hidden rounded-md border border-gray-300">
@@ -21,9 +30,10 @@ export default function QuantityStepper({ value, max, disabled = false, onChange
             <button
                 type="button"
                 aria-label="Increase quantity"
-                disabled={disabled || value >= max}   // limit it based on stock max 99
-                onClick={() => onChange(value + 1)}
-                className={buttonClass}
+                aria-disabled={disabled || atMax}
+                disabled={disabled}   // real disabled only for the busy/out-of-stock state
+                onClick={handleIncrease}
+                className={`${buttonClass} ${atMax ? "cursor-not-allowed opacity-40 hover:bg-transparent" : ""}`}
             >
                 <Plus size={14} />
             </button>
