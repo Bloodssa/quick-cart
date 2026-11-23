@@ -180,24 +180,6 @@ export default function Checkout() {
                                 </p>
                             ) : (
                                 <div role="radiogroup" aria-label="Delivery address" className="mt-4 grid gap-3 md:grid-cols-2">
-                                    <label
-                                        className={`flex cursor-pointer gap-3 rounded-md border p-4 transition-colors ${addressNone
-                                            ? "border-accent-100 bg-accent-50"
-                                            : "border-gray-300 hover:bg-gray-50"
-                                            }`}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="address"
-                                            checked={addressNone}
-                                            onChange={() => setPickedAddressId(NONE)}
-                                            className="mt-1 size-4 shrink-0 accent-accent-100"
-                                        />
-                                        <span className="text-sm">
-                                            <span className="block font-semibold text-heading">None</span>
-                                            <span className="block text-neutral-500">Do not use a saved address.</span>
-                                        </span>
-                                    </label>
                                     {addresses.map((a) => (
                                         <label
                                             key={a.id}
@@ -237,24 +219,6 @@ export default function Checkout() {
                         <section className="rounded-md border border-gray-300 bg-white p-5">
                             <h2 className="font-bold text-heading">2. Payment method</h2>
                             <div role="radiogroup" aria-label="Payment method" className="mt-4 grid gap-3 md:grid-cols-2">
-                                <label
-                                    className={`flex cursor-pointer gap-3 rounded-md border p-4 transition-colors ${paymentNone
-                                        ? "border-accent-100 bg-accent-50"
-                                        : "border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="payment"
-                                        checked={paymentNone}
-                                        onChange={() => setPaymentMethod(NONE)}
-                                        className="mt-1 size-4 shrink-0 accent-accent-100"
-                                    />
-                                    <span className="text-sm">
-                                        <span className="block font-semibold text-heading">None</span>
-                                        <span className="block text-neutral-500">Do not choose a payment method.</span>
-                                    </span>
-                                </label>
                                 {PAYMENT_METHODS.map((method) => (
                                     <label
                                         key={method.value}
