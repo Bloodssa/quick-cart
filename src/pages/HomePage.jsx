@@ -6,6 +6,7 @@ import PromoBanner from "../components/home/PromoBanner";
 import CollectionTiles from "../components/home/CollectionTiles";
 import ProductShelf from "../components/products/ProductShelf";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import DemoAccount from "../components/home/DemoAccount";
 
 const HomePage = () => {
     useDocumentTitle("Home");
@@ -13,6 +14,7 @@ const HomePage = () => {
     return (
         <HomeLayout>
             <HeroSlider />
+            <DemoAccount />
             <FeatureBar />
             <CategoryGrid />
 
